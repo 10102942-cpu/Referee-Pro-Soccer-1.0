@@ -21,13 +21,13 @@
   if(on&&!remote)return;
   if(on){
    document.body.classList.add("crew-view-only");
-   readonlySaved=[];
    document.querySelectorAll("main>section:not(#crewPanel) button,main>section:not(#crewPanel) input,main>section:not(#crewPanel) select,main>section:not(#crewPanel) textarea").forEach(el=>{
-    readonlySaved.push([el,el.disabled]);el.disabled=true;
+    if(el.dataset.crewLock==="1")return;
+    readonlySaved.push([el,el.disabled]);el.dataset.crewLock="1";el.disabled=true;
    });
   }else{
    document.body.classList.remove("crew-view-only");
-   readonlySaved.forEach(([el,wasDisabled])=>{if(el&&el.isConnected)el.disabled=wasDisabled});
+   readonlySaved.forEach(([el,wasDisabled])=>{if(el&&el.isConnected){el.disabled=wasDisabled;delete el.dataset.crewLock}});
    readonlySaved=[];
   }
  }
@@ -118,6 +118,7 @@
    appendTextRows($("individualStats"),s.individual);
    appendTextRows($("incidentHistory"),s.incidents);
    if($("modeDescription"))window.setMatchMode(s.mode||"normal");
+   if(remote)setReadonly(true);
   }catch(e){status("No se pudo actualizar el partido compartido: "+e.message)}
   finally{isApplying=false}
  }
@@ -154,6 +155,8 @@
    if([...members.values()].some(x=>x.role===currentRole)){send(conn,{type:"rejected",payload:{message:"Ese puesto ya está ocupado. Elige otra función."}});setTimeout(()=>conn.close(),250);return}
    const member={id:conn.peer,name:String(m.name||"Árbitro").slice(0,32),role:currentRole};
    members.set(conn.peer,member);connections.set(conn.peer,conn);
+   const officialField=currentRole==="assistant1"?"officialAssistant1":currentRole==="assistant2"?"officialAssistant2":currentRole==="fourth"?"officialFourth":null;
+   if(officialField&&$(officialField)&&!$(officialField).value.trim()){$(officialField).value=member.name;if(typeof window.saveMatchMetadata==="function")window.saveMatchMetadata()}
    send(conn,{type:"welcome",payload:{room:roomCode,role:currentRole}});
    send(conn,{type:"snapshot",payload:getMatchSnapshot()});
    updateCrewListPacket();status("Sala activa. "+members.size+" árbitro(s) de apoyo conectado(s).");
@@ -174,7 +177,7 @@
    broadcastTimer=setInterval(broadcastSnapshot,850);
   });
   peer.on("connection",conn=>addConnection(conn,conn.metadata));
-  peer.on("error",err=>status("Conexión: "+(err.type||err.message||"error")+". Si la sala no se crea, inténtalo otra vez."));
+  peer.on("error",err=>{status("Conexión: "+(err.type||err.message||"error")+". Si la sala no se crea, inténtalo otra vez.");if(host&&!roomCode&&["unavailable-id","server-error","socket-error"].includes(err.type))window.crewLeaveRoom()});
  };
  window.crewJoinRoom=function(){
   if(peer)return;
@@ -189,6 +192,7 @@
   conn.on("data",packet=>{
    if(packet.type==="rejected"){status(packet.payload?.message||"Acceso rechazado.");crewLeaveRoom();return}
    if(packet.type==="welcome"){status("Conectado a la sala. Tu función: "+(roles[selected]||selected));updateReportPanel()}
+   if(packet.type==="closed"){status("El árbitro principal cerró la sala.");window.crewLeaveRoom();return}
    if(packet.type==="snapshot")applySnapshot(packet.payload);
    if(packet.type==="members"){members.clear();(packet.payload||[]).forEach(m=>members.set(m.id,m));setMembers()}
    if(packet.type==="reportAck")status(packet.payload?.message||"Aviso enviado.");

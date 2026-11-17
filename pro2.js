@@ -68,11 +68,11 @@
  };
  window.loadTeamIntoMatch=function(side){
   const t=teams.find(x=>x.id===$("dbTeamSelect").value);if(!t){alert("Selecciona un equipo guardado.");return}
-  if(window.rosters&&rosters[side].length&&!confirm("¿Reemplazar la plantilla actual del "+(side==="home"?"local":"visitante")+"?"))return;
+  if(rosters[side].length&&!confirm("¿Reemplazar la plantilla actual del "+(side==="home"?"local":"visitante")+"?"))return;
+  rosters[side].forEach(p=>players.delete(p.id));rosters[side]=[];if(typeof updateCardRegister==="function")updateCardRegister();
   const count=Math.max(1,Math.min(30,(t.players||[]).length||11));
   $(side+"Count").value=count;
-  const oldConfirm=window.confirm;
-  try{window.confirm=()=>true;window.buildRoster(side)}finally{window.confirm=oldConfirm}
+  window.buildRoster(side)
   const list=rosters[side];
   (t.players||[]).forEach((p,i)=>{if(list[i]){list[i].name=p.name;list[i].number=p.number||i+1}});
   if($(side+"Name"))$(side+"Name").value=t.name;
@@ -150,7 +150,9 @@
   const t=activeTournament(),f=t&&t.fixtures.find(x=>x.id===$("tournamentFixtureSelect").value);if(!f){alert("Selecciona un partido del calendario.");return}
   const home=teams.find(x=>x.id===f.homeId),away=teams.find(x=>x.id===f.awayId);if(!home||!away){alert("Falta un equipo en la base de datos.");return}
   $("dbTeamSelect").value=home.id;loadTeamIntoMatch("home");$("dbTeamSelect").value=away.id;loadTeamIntoMatch("away");
-  $("competitionName").value=t.name;$("matchRound").value="Jornada "+f.round;
+  $("competitionName").value=t.name;$("matchRound").value="Jornada "+f.round;window.saveMatchMetadata();
+  if(running&&!confirm("El cronómetro está activo. ¿Cargar de todas formas y reiniciar el marcador?"))return;
+  clearInterval(interval);interval=null;running=false;paused=false;phase="ready";currentHalf=0;remaining=0;extraSeconds=0;extraRemaining=0;homeScore=f.played?f.homeGoals:0;awayScore=f.played?f.awayGoals:0;updateDisplay();
   say("tournamentStatus","Partido cargado en el marcador.");
  };
  window.saveTournamentResult=function(){
@@ -161,6 +163,7 @@
  };
  function renderAnalyticsNames(){if($("analyticsHomeName"))$("analyticsHomeName").textContent=typeof teamName==="function"?teamName("home"):"LOCAL";if($("analyticsAwayName"))$("analyticsAwayName").textContent=typeof teamName==="function"?teamName("away"):"VISITANTE"}
  function renderAnalytics(){
+  ["home","away"].forEach(team=>{if(!metrics[team])metrics[team]=blankMetrics();Object.keys(blankMetrics()).forEach(key=>{if(typeof metrics[team][key]!=="number")metrics[team][key]=blankMetrics()[key]});});
   ["home","away"].forEach(team=>Object.keys(metrics[team]).forEach(key=>{
    const id=team+key[0].toUpperCase()+key.slice(1);if($(id))$(id).textContent=metrics[team][key];
   }));
@@ -176,9 +179,7 @@
   const n=Math.max(0,Math.min(100,parseInt(value,10)||0));metrics[team].possession=n;metrics[team==="home"?"away":"home"].possession=100-n;
   writeStore(METRICS_KEY,metrics);renderAnalytics();
  };
- function resetMetrics(){metrics={home:blankMetrics(),away:blankMetrics()};writeStore(METRICS_KEY,metrics);renderAnalytics()}
- const originalReset=window.resetMatch;
- if(typeof originalReset==="function")window.resetMatch=function(){originalReset();resetMetrics()};
+ window.resetMatchMetrics=function(){if(!confirm("¿Reiniciar las estadísticas de ambos equipos?"))return;metrics={home:blankMetrics(),away:blankMetrics()};writeStore(METRICS_KEY,metrics);renderAnalytics()};
  const originalUpdate=window.updateDisplay;
  if(typeof originalUpdate==="function")window.updateDisplay=function(){originalUpdate();renderAnalyticsNames()};
  window.refreshIncidentPlayers=function(){
@@ -204,11 +205,14 @@
   ["home","away"].forEach(team=>{const m=metrics[team];lines.push(teamName(team)+": tiros "+m.shots+", a puerta "+m.onTarget+", córneres "+m.corners+", faltas "+m.fouls+", fuera de juego "+m.offsides+", posesión "+m.possession+"%")});
   box.textContent+=(box.textContent?"\n":"")+lines.join("\n");
  };
+ let initialized=false;
  function init(){
+  if(initialized)return;initialized=true;
   refreshTeamSelects();refreshTournamentSelect();renderTournament();renderAnalytics();renderMetadata();refreshIncidentPlayers();
   const now=new Date();if(!$("matchDate").value){const local=new Date(now.getTime()-now.getTimezoneOffset()*60000);$("matchDate").value=local.toISOString().slice(0,16)}
   if("serviceWorker" in navigator&&location.protocol!=="file:")navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
  }
- document.addEventListener("keydown",event=>{if(event.target&&/INPUT|TEXTAREA|SELECT/.test(event.target.tagName))return;if(event.ctrlKey&&event.key.toLowerCase()==="z"&&typeof window.undoAction==="function"){event.preventDefault();window.undoAction();return}if(event.code==="Space"&&typeof window.togglePause==="function"){event.preventDefault();window.togglePause()}else if(event.key.toLowerCase()==="w"&&typeof window.manualWhistle==="function"){event.preventDefault();window.manualWhistle()}});\n document.addEventListener("DOMContentLoaded",init);
+ document.addEventListener("keydown",event=>{if(event.target&&/INPUT|TEXTAREA|SELECT|BUTTON|A/.test(event.target.tagName))return;if(event.ctrlKey&&event.key.toLowerCase()==="z"&&typeof window.undoAction==="function"){event.preventDefault();window.undoAction();return}if(event.code==="Space"&&typeof window.togglePause==="function"){event.preventDefault();window.togglePause()}else if(event.key.toLowerCase()==="w"&&typeof window.manualWhistle==="function"){event.preventDefault();window.manualWhistle()}});
+ document.addEventListener("DOMContentLoaded",init);
  if(document.readyState!=="loading")init();
 })();

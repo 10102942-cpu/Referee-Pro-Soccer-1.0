@@ -59,12 +59,13 @@
  }
  function updateVoiceUI(){
   const panel=$("crewVoicePanel");if(!panel)return;
-  panel.hidden=!voiceReady;
+  panel.hidden=false;
+  $("crewVoiceStart").disabled=!voiceReady||!peer||voiceEnabled;
   $("crewVoiceStart").hidden=voiceEnabled;
   $("crewMicToggle").hidden=!voiceEnabled;
   $("crewVoiceStop").hidden=!voiceEnabled;
   $("crewMicToggle").textContent=micMuted?"🎙️ ACTIVAR MICRÓFONO":"🔇 SILENCIAR MICRÓFONO";
-  $("crewVoiceStatus").textContent=!voiceEnabled?"Voz desactivada.":(micMuted?"Micrófono silenciado · puedes escuchar.":"Micrófono activo · conectado al equipo.");
+  $("crewVoiceStatus").textContent=!voiceReady?"Conecta primero con una sala para habilitar la voz.":(!voiceEnabled?"Listo para activar el micrófono desde este dispositivo.":(micMuted?"Micrófono silenciado · puedes escuchar.":"Micrófono activo · conectado al equipo."));
  }
  function attachVoiceCall(call,direction){
   const id=call.peer,old=voiceCalls.get(id);
@@ -98,10 +99,10 @@
   if(!peer||!voiceReady||voiceEnabled)return;
   if(!navigator.mediaDevices?.getUserMedia){status("El navegador no permite usar el micrófono. Abre la página mediante HTTPS.");return}
   try{
-   localAudioStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});
+   try{localAudioStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});}catch(firstError){localAudioStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});}
    voiceEnabled=true;micMuted=false;localAudioStream.getAudioTracks().forEach(t=>t.enabled=true);voiceCalls.forEach(x=>{try{x.call.close()}catch(e){}});voiceCalls.clear();updateVoiceUI();syncVoiceCalls();
    status("Chat de voz activado. Los demás árbitros también deben activar su micrófono para hablar.");
-  }catch(e){status(e.name==="NotAllowedError"?"Permite el micrófono en los permisos del navegador.":"No se pudo activar el micrófono: "+(e.message||e.name))}
+  }catch(e){status(e.name==="NotAllowedError"?"Permite el micrófono en los ajustes del navegador o del teléfono.":(e.name==="NotFoundError"?"No se encontró un micrófono disponible en este dispositivo.":"No se pudo activar el micrófono: "+(e.message||e.name)))}
  }
  function unlockRemoteAudio(){
   document.querySelectorAll('[id^="crew-audio-"]').forEach(a=>{a.muted=false;a.volume=1;const p=a.play();if(p&&p.catch)p.catch(()=>{});});

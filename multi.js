@@ -73,15 +73,14 @@
   call.on("stream",stream=>{
    let audio=document.getElementById("crew-audio-"+id);
    if(!audio){audio=document.createElement("audio");audio.id="crew-audio-"+id;audio.autoplay=true;audio.playsInline=true;audio.style.position="fixed";audio.style.width="1px";audio.style.height="1px";audio.style.opacity="0";audio.style.pointerEvents="none";document.body.append(audio)}
-   audio.srcObject=stream;const play=audio.play();if(play&&play.catch)play.catch(()=>status("La voz está conectada. Toca la pantalla para permitir el audio."));
+   audio.srcObject=stream;audio.muted=false;audio.volume=1;const play=audio.play();if(play&&play.catch)play.catch(()=>{const unlock=$("crewAudioUnlock");if(unlock)unlock.hidden=false;status("Audio recibido. Pulsa ACTIVAR AUDIO DEL MÓVIL para escucharlo.");});
   });
   call.on("close",()=>{if(voiceCalls.get(id)?.call===call)voiceCalls.delete(id);const a=document.getElementById("crew-audio-"+id);if(a){a.srcObject=null;a.remove()}});
   call.on("error",()=>{if(voiceCalls.get(id)?.call===call)voiceCalls.delete(id)});
  }
  function handleIncomingVoiceCall(call){
   if(!peer||!voiceReady){try{call.close()}catch(e){}return}
-  const current=voiceCalls.get(call.peer),localIsLower=String(peer.id).localeCompare(String(call.peer))<0;
-  if(localIsLower&&voiceEnabled){try{call.close()}catch(e){}return}
+  const current=voiceCalls.get(call.peer);
   if(current){try{current.call.close()}catch(e){}voiceCalls.delete(call.peer)}
   try{call.answer(localAudioStream||undefined);attachVoiceCall(call,"incoming")}catch(e){status("No se pudo abrir el audio: "+e.message)}
  }
@@ -100,9 +99,14 @@
   if(!navigator.mediaDevices?.getUserMedia){status("El navegador no permite usar el micrófono. Abre la página mediante HTTPS.");return}
   try{
    localAudioStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});
-   voiceEnabled=true;micMuted=false;localAudioStream.getAudioTracks().forEach(t=>t.enabled=true);updateVoiceUI();syncVoiceCalls();
+   voiceEnabled=true;micMuted=false;localAudioStream.getAudioTracks().forEach(t=>t.enabled=true);voiceCalls.forEach(x=>{try{x.call.close()}catch(e){}});voiceCalls.clear();updateVoiceUI();syncVoiceCalls();
    status("Chat de voz activado. Los demás árbitros también deben activar su micrófono para hablar.");
   }catch(e){status(e.name==="NotAllowedError"?"Permite el micrófono en los permisos del navegador.":"No se pudo activar el micrófono: "+(e.message||e.name))}
+ }
+ function unlockRemoteAudio(){
+  document.querySelectorAll('[id^="crew-audio-"]').forEach(a=>{a.muted=false;a.volume=1;const p=a.play();if(p&&p.catch)p.catch(()=>{});});
+  if($("crewAudioUnlock"))$("crewAudioUnlock").hidden=true;
+  status("Audio del móvil activado.");
  }
  function toggleMic(){
   if(!localAudioStream)return;
@@ -313,6 +317,7 @@
   $("crewRole").addEventListener("change",updateReportPanel);
   updateReportPanel();setButtons(false);setMembers();updateVoiceUI();
   $("crewVoiceStart").addEventListener("click",startVoice);
+  if($("crewAudioUnlock"))$("crewAudioUnlock").addEventListener("click",unlockRemoteAudio);
   $("crewMicToggle").addEventListener("click",toggleMic);
   $("crewVoiceStop").addEventListener("click",stopVoice);
  }

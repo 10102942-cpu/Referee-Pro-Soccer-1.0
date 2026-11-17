@@ -759,4 +759,114 @@ updateHeadings();renderCardOptions();updateCardRegister();updateDisplay();
 })();
 </script>
 
+
+<script>
+/* ===== MODOS DE PARTIDO Y GESTOR DE SONIDOS ===== */
+(()=>{
+ const byId=id=>document.getElementById(id);
+ const DB="ArbitroProAudioDB",STORE="sounds";
+ let database=null,sounds=[];
+ function openAudioDB(){
+  return new Promise((resolve,reject)=>{
+   const req=indexedDB.open(DB,1);
+   req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains(STORE))req.result.createObjectStore(STORE,{keyPath:"id",autoIncrement:true})};
+   req.onsuccess=()=>{database=req.result;resolve(database)};
+   req.onerror=()=>reject(req.error);
+  });
+ }
+ function store(mode="readonly"){return database.transaction(STORE,mode).objectStore(STORE)}
+ async function loadSounds(){
+  try{
+   if(!database)await openAudioDB();
+   sounds=await new Promise((resolve,reject)=>{const q=store().getAll();q.onsuccess=()=>resolve(q.result||[]);q.onerror=()=>reject(q.error)});
+   renderSoundList();
+  }catch(e){byId("soundLibrary").textContent="No se pudo abrir el almacenamiento de sonidos en este navegador."}
+ }
+ function renderSoundList(){
+  const box=byId("soundLibrary");box.replaceChildren();
+  if(!sounds.length){const p=document.createElement("div");p.className="small";p.textContent="Todavía no hay sonidos personalizados.";box.append(p);return}
+  sounds.forEach(s=>{
+   const row=document.createElement("div");row.className="sound-row";
+   const name=document.createElement("span");name.textContent=s.name+" · "+({whistle:"Silbato",goal:"Gol",card:"Tarjetas",startend:"Inicio/final",substitution:"Sustituciones"}[s.category]||s.category);
+   const play=document.createElement("button");play.className="secondary";play.textContent="▶ PROBAR";play.onclick=()=>playBlob(s.blob);
+   const remove=document.createElement("button");remove.className="danger";remove.textContent="🗑 ELIMINAR";remove.onclick=()=>deleteSound(s.id);
+   row.append(name,play,remove);box.append(row);
+  });
+ }
+ function playBlob(blob){
+  const url=URL.createObjectURL(blob),audio=new Audio(url);
+  audio.onended=()=>URL.revokeObjectURL(url);audio.onerror=()=>URL.revokeObjectURL(url);
+  audio.play().catch(()=>URL.revokeObjectURL(url));
+ }
+ window.addCustomSound=async function(){
+  const file=byId("soundFile").files[0];
+  if(!file){alert("Selecciona primero un archivo de audio.");return}
+  if(!file.type.startsWith("audio/")){alert("Selecciona un archivo de audio válido.");return}
+  try{
+   if(!database)await openAudioDB();
+   const entry={name:file.name,category:byId("soundCategory").value,blob:file};
+   await new Promise((resolve,reject)=>{const q=store("readwrite").add(entry);q.onsuccess=resolve;q.onerror=()=>reject(q.error)});
+   byId("soundFile").value="";await loadSounds();
+  }catch(e){alert("No se pudo guardar el sonido. Prueba con un archivo de audio más pequeño.")}
+ };
+ async function deleteSound(id){
+  if(!confirm("¿Eliminar este sonido?"))return;
+  try{await new Promise((resolve,reject)=>{const q=store("readwrite").delete(id);q.onsuccess=resolve;q.onerror=()=>reject(q.error)});await loadSounds()}
+  catch(e){alert("No se pudo eliminar el sonido.")}
+ }
+ window.playCustomSound=function(category){
+  const sound=[...sounds].reverse().find(s=>s.category===category);
+  if(!sound)return false;
+  playBlob(sound.blob);return true;
+ };
+ window.setMatchMode=function(mode){
+  const fast=mode==="fast";
+  document.body.classList.toggle("fast-mode",fast);
+  byId("modeDescription").textContent=fast
+   ?"Fútbol rápido: registra goles con su autor, tarjetas, cambios y revisiones VAR. Oculta estadísticas y anotaciones secundarias."
+   :"Fútbol normal: permite registrar goles, asistencias, tarjetas, cambios, lesiones, acciones y revisiones.";
+  try{localStorage.setItem("arbitroProMatchMode",mode)}catch(e){}
+ };
+ function fillScorerSelectors(){
+  for(const team of ["home","away"]){
+   const select=byId(team+"GoalPlayer");if(!select)continue;
+   const previous=select.value;select.replaceChildren(new Option("Selecciona jugador",""));
+   rosters[team].forEach(p=>{if(!p.expelled)select.add(new Option(p.number+". "+p.name,p.id))});
+   if([...select.options].some(o=>o.value===previous))select.value=previous;
+  }
+ }
+ const originalBuild=window.buildRoster;
+ window.buildRoster=function(team){originalBuild(team);fillScorerSelectors()};
+ const originalRender=window.renderRoster;
+ window.renderRoster=function(team){originalRender(team);fillScorerSelectors()};
+ const originalGoal=window.recordGoal;
+ window.registerScoreGoal=function(team){
+  const playerId=byId(team+"GoalPlayer").value;
+  if(!playerId){alert("Selecciona quién marcó el gol.");return}
+  byId("statTeam").value=team;
+  window.refreshStatPlayers();
+  byId("goalScorer").value=playerId;
+  originalGoal();
+  if(window.playCustomSound)window.playCustomSound("goal");
+  fillScorerSelectors();
+ };
+ const originalCard=window.giveCard;
+ window.giveCard=function(type){originalCard(type);if(window.playCustomSound)window.playCustomSound("card")};
+ const originalSub=window.makeSubstitution;
+ window.makeSubstitution=function(){originalSub();if(window.playCustomSound)window.playCustomSound("substitution")};
+ const originalAddEvent=window.addEvent;
+ window.addEvent=function(message,time){
+  if(byId("matchMode")?.value==="fast"){
+   const essential=/inicio del|final del|gol|amarilla|roja|expulsado|cambio|var|penalti|prórroga|tanda/i.test(String(message));
+   if(!essential)return;
+  }
+  originalAddEvent(message,time);
+ };
+ const originalWhistle=window.whistle;
+ window.whistle=function(){if(window.playCustomSound&&window.playCustomSound("whistle"))return;originalWhistle()};
+ const mode=(()=>{try{return localStorage.getItem("arbitroProMatchMode")||"normal"}catch(e){return "normal"}})();
+ byId("matchMode").value=mode;window.setMatchMode(mode);
+ fillScorerSelectors();loadSounds();
+})();
+</script>
 </html>

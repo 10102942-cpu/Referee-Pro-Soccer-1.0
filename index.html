@@ -56,6 +56,16 @@
   <div><span class="small">CÓDIGO DE SALA</span><strong id="crewRoomCodeDisplay">—</strong><button class="secondary" onclick="crewCopyInvite()">COPIAR INVITACIÓN</button></div>
   <div><span class="small">PIN PRIVADO</span><strong id="crewPinDisplay">••••••</strong></div>
  </div>
+ <div id="crewVoicePanel" class="crew-voice-panel" hidden>
+  <h3>🎙️ CHAT DE VOZ DEL EQUIPO</h3>
+  <p class="small">Activa la voz para hablar con los árbitros conectados. Cada participante debe activar su micrófono para poder hablar.</p>
+  <div class="crew-voice-actions">
+   <button id="crewVoiceStart">🎙️ ACTIVAR CHAT DE VOZ</button>
+   <button id="crewMicToggle" class="secondary" hidden>🔇 SILENCIAR MICRÓFONO</button>
+   <button id="crewVoiceStop" class="danger" hidden>⏹️ APAGAR VOZ</button>
+  </div>
+  <p id="crewVoiceStatus" class="crew-voice-status" aria-live="polite">Voz desactivada.</p>
+ </div>
  <p id="crewStatus" class="crew-status" aria-live="polite">Modo individual: el partido funciona con normalidad sin conectar a nadie.</p>
  <div class="crew-members-wrap"><h3>Árbitros conectados</h3><div id="crewMembers" class="crew-members"><span class="small">Solo este dispositivo.</span></div></div>
  <div id="crewReportBox" class="crew-report-box" hidden>
@@ -77,7 +87,7 @@
    <button onclick="crewSendReport('Observación del cuarto árbitro')">📨 ENVIAR OBSERVACIÓN</button>
   </div>
  </div>
- <p class="crew-privacy">Conexión de datos entre navegadores. No activa cámara ni micrófono. Se utiliza el servicio de señalización PeerJS para establecer la conexión; los datos del partido viajan directamente entre dispositivos mediante WebRTC cuando la red lo permite.</p>
+ <p class="crew-privacy">La voz utiliza el micrófono solo cuando pulsas «Activar chat de voz». El audio se transmite directamente entre los dispositivos mediante WebRTC; usa auriculares para evitar eco. La conexión necesita Internet y permisos de micrófono.</p>
 </section>
 <section class="panel">
 <h2>⏱️ CONFIGURACIÓN</h2><label>Tipo de arbitraje</label>

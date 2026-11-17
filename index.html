@@ -14,6 +14,7 @@
 <h1>⚽ ÁRBITRO PRO 2026</h1>
 <div class="small">Panel de control arbitral</div>
 </header>
+<nav class="pro-nav" aria-label="Navegación principal"><a href="#matchMetaPanel">Partido</a><a href="#teamDatabasePanel">Equipos</a><a href="#tournamentPanel">Torneos</a><a href="#matchAnalyticsPanel">Estadísticas</a><a href="#incidentPanel">Incidentes</a><a href="#varPanel">VAR</a></nav>
 <main>
 <section class="panel pro-panel" id="matchMetaPanel">
  <div class="section-kicker">CENTRO DE CONTROL</div><h2>📡 DATOS OFICIALES DEL ENCUENTRO</h2>
@@ -249,7 +250,7 @@
   <div class="analytics-team"><h3 id="analyticsHomeName">LOCAL</h3><div class="metric-row"><span>Tiros</span><strong id="homeShots">0</strong><button onclick="changeMatchStat('home','shots',1)">＋</button></div><div class="metric-row"><span>A puerta</span><strong id="homeOnTarget">0</strong><button onclick="changeMatchStat('home','onTarget',1)">＋</button></div><div class="metric-row"><span>Córneres</span><strong id="homeCorners">0</strong><button onclick="changeMatchStat('home','corners',1)">＋</button></div><div class="metric-row"><span>Faltas</span><strong id="homeFouls">0</strong><button onclick="changeMatchStat('home','fouls',1)">＋</button></div><div class="metric-row"><span>Fuera de juego</span><strong id="homeOffsides">0</strong><button onclick="changeMatchStat('home','offsides',1)">＋</button></div><label>Posesión %<input id="homePossession" type="number" min="0" max="100" value="50" onchange="setPossession('home',this.value)"></label></div>
   <div class="analytics-team"><h3 id="analyticsAwayName">VISITANTE</h3><div class="metric-row"><span>Tiros</span><strong id="awayShots">0</strong><button onclick="changeMatchStat('away','shots',1)">＋</button></div><div class="metric-row"><span>A puerta</span><strong id="awayOnTarget">0</strong><button onclick="changeMatchStat('away','onTarget',1)">＋</button></div><div class="metric-row"><span>Córneres</span><strong id="awayCorners">0</strong><button onclick="changeMatchStat('away','corners',1)">＋</button></div><div class="metric-row"><span>Faltas</span><strong id="awayFouls">0</strong><button onclick="changeMatchStat('away','fouls',1)">＋</button></div><div class="metric-row"><span>Fuera de juego</span><strong id="awayOffsides">0</strong><button onclick="changeMatchStat('away','offsides',1)">＋</button></div><label>Posesión %<input id="awayPossession" type="number" min="0" max="100" value="50" onchange="setPossession('away',this.value)"></label></div>
  </div>
- <p class="small" id="possessionBalance">Posesión: 50 % — 50 %</p>
+ <p class="small" id="possessionBalance">Posesión: 50 % — 50 %</p><button class="secondary" id="resetMetricsBtn" onclick="resetMatchMetrics()">↻ REINICIAR ESTADÍSTICAS</button>
 </section>
 <section class="panel pro-panel" id="incidentPanel">
  <div class="section-kicker">ACTA DISCIPLINARIA</div><h2>📝 REGISTRO DETALLADO DE INCIDENTES</h2>

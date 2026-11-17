@@ -107,6 +107,19 @@ label{display:block;margin:8px}
  #pitchWrap{max-width:420px}
 }
 
+
+/* MÓDULOS EXTRA */
+#extraPanel hr{border:0;border-top:1px solid #28583d;margin:16px 0}
+.light-theme{background:#edf4ef!important;color:#17251c!important}
+.light-theme header,.light-theme .panel,.light-theme .team-setup>div{background:#fff!important;color:#17251c!important;border-color:#8bb99a}
+.light-theme input,.light-theme select{background:#f3f8f4!important;color:#17251c!important;border-color:#25864b}
+.light-theme .secondary{background:#d4e4d8!important;color:#173322!important}
+.light-theme .event,.light-theme .player-row{border-color:#c5d9ca}
+#individualStats{max-height:280px;overflow:auto;text-align:left;margin-top:12px}
+#reportOutput{white-space:pre-wrap;text-align:left;background:#07130f;padding:12px;border-radius:8px;margin-top:12px}
+.light-theme #reportOutput{background:#edf4ef;color:#17251c}
+@media print{header,.controls,button,#extraPanel,#playersStatsPanel,#quickPanel,#varPanel,#toolsPanel>div.controls{display:none!important}body{background:white!important;color:black!important}.panel{break-inside:avoid;border:1px solid #aaa!important;color:black!important}}
+
 </style>
 </head>
 <body>
@@ -228,6 +241,65 @@ label{display:block;margin:8px}
 <section class="panel">
 <h2>📋 REGISTRO DE TARJETAS</h2>
 <div id="cardRegister" class="small">Todavía no hay tarjetas.</div>
+</section>
+
+
+<section class="panel" id="extraPanel">
+<h2>⏱️ PRÓRROGA Y PENALES</h2>
+<label>Duración de cada tiempo extra (minutos)</label>
+<input id="extraDuration" type="number" min="1" max="30" value="15">
+<div class="controls">
+<button id="extraStartBtn" onclick="startExtraHalf(3)">▶ INICIAR PRÓRROGA</button>
+<button id="extraSecondBtn" class="secondary" onclick="startExtraHalf(4)" disabled>▶ SEGUNDO TIEMPO EXTRA</button>
+<button id="shootoutBtn" class="secondary" onclick="toggleShootout()">⚽ TANDA DE PENALES</button>
+</div>
+<div id="shootoutBox" hidden>
+<h3>Tanda de penaltis</h3>
+<div class="scoreboard"><div><strong id="shootHomeName">LOCAL</strong><div class="score" id="shootHome">0</div><button onclick="shootPenalty('home',true)">✓ GOL</button><button class="danger" onclick="shootPenalty('home',false)">✕ FALLADO</button></div><div>:</div><div><strong id="shootAwayName">VISITANTE</strong><div class="score" id="shootAway">0</div><button onclick="shootPenalty('away',true)">✓ GOL</button><button class="danger" onclick="shootPenalty('away',false)">✕ FALLADO</button></div></div>
+</div>
+</section>
+<section class="panel" id="playersStatsPanel">
+<h2>👕 JUGADORES Y ESTADÍSTICAS</h2>
+<label>Equipo</label><select id="statTeam" onchange="refreshStatPlayers()"><option value="home">Local</option><option value="away">Visitante</option></select>
+<label>Jugador</label><select id="statPlayer"></select>
+<label>Autor del gol</label><select id="goalScorer"></select>
+<label>Asistencia (opcional)</label><select id="goalAssist"><option value="">Sin asistencia</option></select>
+<button onclick="recordGoal()">⚽ REGISTRAR GOL</button>
+<hr>
+<label>Jugador lesionado</label><select id="injuryPlayer"></select>
+<button class="secondary" onclick="recordInjury()">🩹 REGISTRAR LESIÓN / ATENCIÓN</button>
+<div id="individualStats" class="events"></div>
+</section>
+<section class="panel" id="quickPanel">
+<h2>⚡ ACCIONES RÁPIDAS</h2>
+<div class="controls">
+<button onclick="quickEvent('Falta')">🚩 FALTA</button>
+<button onclick="quickEvent('Penalti señalado')">⚽ PENALTI</button>
+<button onclick="quickEvent('Córner')">↗ CÓRNER</button>
+<button onclick="quickEvent('Saque de banda')">↔ SAQUE DE BANDA</button>
+<button onclick="quickEvent('Fuera de juego')">🚩 FUERA DE JUEGO</button>
+<button onclick="quickEvent('Lesión / atención médica')">🩹 LESIÓN</button>
+</div>
+</section>
+<section class="panel" id="varPanel">
+<h2>📺 REVISIÓN VAR · REGISTRO DE DECISIONES</h2>
+<p class="small">El VAR registra una revisión y su resolución en la cronología. No reproduce vídeo.</p>
+<label>Motivo de revisión</label><select id="varReason"><option>Posible gol / balón fuera</option><option>Posible penalti</option><option>Posible tarjeta roja</option><option>Identidad equivocada</option><option>Otro incidente</option></select>
+<label>Decisión</label><select id="varDecision"><option>Decisión inicial confirmada</option><option>Decisión inicial corregida</option><option>Gol anulado</option><option>Penalti confirmado</option><option>Penalti anulado</option><option>Tarjeta roja confirmada</option><option>Tarjeta roja anulada</option></select>
+<label>Equipo afectado (si corresponde)</label><select id="varTeam"><option value="home">Local</option><option value="away">Visitante</option></select>
+<button onclick="recordVAR()">📺 REGISTRAR REVISIÓN VAR</button>
+</section>
+<section class="panel" id="toolsPanel">
+<h2>🧾 INFORME Y CONTROLES</h2>
+<div class="controls">
+<button class="secondary" onclick="undoAction()">↶ DESHACER ÚLTIMA ACCIÓN</button>
+<button onclick="showMatchReport()">📋 VER INFORME ARBITRAL</button>
+<button onclick="exportMatchReport()">⬇ EXPORTAR INFORME</button>
+<button class="secondary" onclick="toggleTheme()">🌗 MODO OSCURO / CLARO</button>
+<button class="secondary" onclick="toggleFullscreen()">⛶ PANTALLA COMPLETA</button>
+</div>
+<div id="reportOutput" class="events" hidden></div>
+<p class="small" id="saveStatus">Guardado automático activado en este dispositivo.</p>
 </section>
 
 <section class="panel">
@@ -548,4 +620,143 @@ buildRoster("home");buildRoster("away");
 updateHeadings();renderCardOptions();updateCardRegister();updateDisplay();
 </script>
 </body>
+
+<script>
+/* ===== MODULOS EXTRA ARBITRO PRO 2026 ===== */
+(()=>{
+ const $x=id=>document.getElementById(id);
+ const STORAGE_KEY="arbitroPro2026State_v2";
+ let extraDuration=15,shoot={home:0,away:0,homeTaken:0,awayTaken:0},shootActive=false;
+ let stats={},undoStack=[],restoring=false;
+ const safe=(v)=>String(v??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+ function allPlayers(){return [...rosters.home.map(p=>({...p,team:"home"})),...rosters.away.map(p=>({...p,team:"away"}))]}
+ function snapshot(){
+  return {phase,currentHalf,duration,remaining,extraSeconds,extraRemaining,running,paused,homeScore,awayScore,
+   rosters:{home:rosters.home,away:rosters.away},players:[...players.entries()],events:$x("events").innerHTML,
+   stats,shoot,shootActive,extraDuration,cardRegister:$x("cardRegister").innerHTML};
+ }
+ function restore(s){
+  restoring=true;clearInterval(interval);interval=null;
+  phase=s.phase;currentHalf=s.currentHalf;duration=s.duration;remaining=s.remaining;extraSeconds=s.extraSeconds;
+  extraRemaining=s.extraRemaining;running=false;paused=s.paused;homeScore=s.homeScore;awayScore=s.awayScore;
+  rosters.home=s.rosters.home||[];rosters.away=s.rosters.away||[];
+  players.clear();(s.players||[]).forEach(([k,v])=>players.set(k,v));
+  stats=s.stats||{};shoot=s.shoot||shoot;shootActive=!!s.shootActive;extraDuration=s.extraDuration||15;
+  $x("events").innerHTML=s.events||'<div class="small">Todavía no hay eventos.</div>';
+  $x("cardRegister").innerHTML=s.cardRegister||"Todavía no hay tarjetas.";
+  $x("extraDuration").value=extraDuration;$x("shootHome").textContent=shoot.home;$x("shootAway").textContent=shoot.away;
+  $x("shootoutBox").hidden=!shootActive;
+  renderRoster("home");renderRoster("away");renderPitch();updateSubOptions();renderCardOptions();
+  updateDisplay();
+  if(s.running&&!s.paused&&(phase==="first"||phase==="second")){running=true;interval=setInterval(tick,1000)}
+  restoring=false;save();
+ }
+ function save(){
+  if(restoring)return;
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify(snapshot()));$x("saveStatus").textContent="✓ Partido guardado automáticamente en este dispositivo."}
+  catch(e){$x("saveStatus").textContent="No se pudo guardar automáticamente en este navegador."}
+ }
+ function beforeAction(){undoStack.push(snapshot());if(undoStack.length>40)undoStack.shift()}
+ window.undoAction=function(){if(!undoStack.length){alert("No hay acciones recientes para deshacer.");return}const s=undoStack.pop();restore(s);addEvent("↶ Se deshizo la última acción");save()};
+ const wrap=(name)=>{const original=window[name];if(typeof original!=="function")return;window[name]=function(...args){beforeAction();const result=original.apply(this,args);save();return result}};
+ ["changeScore","giveCard","makeSubstitution","resetMatch"].forEach(wrap);
+ window.addEvent=function(message,time=null){
+  const box=$x("events"),empty=box.querySelector(".small");if(empty)empty.remove();
+  const item=document.createElement("div");item.className="event";
+  const stamp=document.createElement("strong");stamp.textContent=time||window.currentMatchTime();
+  const desc=document.createElement("span");desc.textContent=" — "+message;item.append(stamp,desc);box.prepend(item);save();
+ };
+ window.currentMatchTime=function(){
+  if(!currentHalf)return "PREPARTIDO";
+  if(currentHalf===3||currentHalf===4)return (currentHalf===3?"PRÓRROGA 1 ":"PRÓRROGA 2 ")+(remaining>0?formatTime(extraDuration*60-remaining):extraDuration+"+");
+  return (currentHalf===1?"1T ":"2T ")+(remaining>0?formatTime(duration*60-remaining):duration+"+"+formatTime(extraSeconds-extraRemaining));
+ };
+ const oldUpdate=window.updateDisplay;
+ window.updateDisplay=function(){oldUpdate();if(currentHalf===3||currentHalf===4){$x("clock").textContent=remaining>0?formatTime(extraDuration*60-remaining):formatTime(extraDuration*60);$x("status").textContent=(currentHalf===3?"PRÓRROGA · PRIMER TIEMPO":"PRÓRROGA · SEGUNDO TIEMPO")+(paused?" · PAUSADO":"");$x("extraBanner").textContent="TIEMPO EXTRA";$x("startBtn").disabled=true;$x("pauseBtn").disabled=false;$x("pauseBtn").textContent=paused?"▶ REANUDAR":"⏸ PAUSAR"}};
+ const oldEnd=window.endHalf;
+ window.endHalf=function(){
+  if(currentHalf===3){clearInterval(interval);interval=null;running=false;paused=false;phase="extraBreak";addEvent("Final de la primera parte de la prórroga");whistle();updateDisplay();$x("extraSecondBtn").disabled=false;save();return}
+  if(currentHalf===4){clearInterval(interval);interval=null;running=false;paused=false;phase="finished";addEvent("Final de la prórroga");whistle();updateDisplay();save();return}
+  oldEnd();save();
+ };
+ window.startExtraHalf=function(n){
+  if(phase!=="finished"&&phase!=="extraBreak"){alert("La prórroga se habilita cuando termina el segundo tiempo.");return}
+  if(n===4&&phase!=="extraBreak"){alert("Primero debe terminar el primer tiempo extra.");return}
+  beforeAction();extraDuration=Math.max(1,Math.min(30,parseInt($x("extraDuration").value,10)||15));
+  currentHalf=n;duration=extraDuration;remaining=duration*60;extraSeconds=0;extraRemaining=0;
+  phase=n===3?"first":"second";running=true;paused=false;
+  addEvent(n===3?"Inicio de la prórroga — primer tiempo":"Inicio de la prórroga — segundo tiempo");
+  whistle();updateDisplay();clearInterval(interval);interval=setInterval(tick,1000);
+  $x("extraStartBtn").disabled=true;$x("extraSecondBtn").disabled=n!==3;save();
+ };
+ window.togglePause=function(){
+  if(currentHalf===3||currentHalf===4){paused=!paused;updateDisplay();addEvent(paused?"Prórroga pausada":"Prórroga reanudada");save();return}
+  const old=window.__oldTogglePause;if(old)old();
+ };
+ // Preserve original pause handler for normal periods.
+ const originalPause=window.togglePause;
+ window.togglePause=function(){
+  if(currentHalf===3||currentHalf===4){beforeAction();paused=!paused;updateDisplay();addEvent(paused?"Prórroga pausada":"Prórroga reanudada");save();return}
+  const p=window.__pauseOriginal;if(p)p();
+ };
+ window.__pauseOriginal=window.__pauseOriginal||(()=>{paused=!paused;updateDisplay();addEvent(paused?"Partido pausado":"Partido reanudado")});
+ // Rebuild normal pause behavior without depending on inline-handler reassignment.
+ window.togglePause=function(){
+  if(currentHalf===3||currentHalf===4){beforeAction();paused=!paused;updateDisplay();addEvent(paused?"Prórroga pausada":"Prórroga reanudada");save();return}
+  beforeAction();paused=!paused;updateDisplay();addEvent(paused?"Partido pausado":"Partido reanudado");save();
+ };
+ window.toggleShootout=function(){beforeAction();shootActive=!shootActive;$x("shootoutBox").hidden=!shootActive;$x("shootHomeName").textContent=teamName("home");$x("shootAwayName").textContent=teamName("away");addEvent(shootActive?"Inicio de la tanda de penaltis":"Se cerró el panel de penaltis");save()};
+ window.shootPenalty=function(team,scored){beforeAction();shoot[team+"Taken"]++;if(scored)shoot[team]++;$x("shootHome").textContent=shoot.home;$x("shootAway").textContent=shoot.away;addEvent("Penalti de "+teamName(team)+": "+(scored?"GOL":"FALLADO")+" ("+shoot[team]+" / "+shoot[team+"Taken"]+")");if(navigator.vibrate)navigator.vibrate(scored?100:[70,40,70]);save()};
+ function refreshSelect(id,team,includeEmpty){const sel=$x(id),prev=sel.value;sel.replaceChildren();if(includeEmpty)sel.add(new Option("Sin seleccionar",""));rosters[team].forEach(p=>{if(!p.expelled)sel.add(new Option(p.number+". "+p.name,p.id))});if([...sel.options].some(o=>o.value===prev))sel.value=prev}
+ window.refreshStatPlayers=function(){const t=$x("statTeam").value;["statPlayer","goalScorer","goalAssist","injuryPlayer"].forEach(id=>refreshSelect(id,t,id==="goalAssist"));};
+ window.recordGoal=function(){
+  const id=$x("goalScorer").value,p=allPlayers().find(x=>x.id===id);if(!p){alert("Selecciona al goleador.");return}
+  beforeAction();const team=p.team;homeOrAwayScore(team,1);stats[id]??={goals:0,assists:0,injuries:0};stats[id].goals++;
+  const aid=$x("goalAssist").value,a=allPlayers().find(x=>x.id===aid);
+  if(a&&a.id!==id){stats[aid]??={goals:0,assists:0,injuries:0};stats[aid].assists++}
+  addEvent("⚽ GOL de "+p.name+" ("+teamName(team)+")"+(a&&a.id!==id+" — asistencia: "+a.name:""));
+  whistle();updateDisplay();renderStats();vibrate(120);save();
+ };
+ function homeOrAwayScore(team,n){if(team==="home")homeScore=Math.max(0,homeScore+n);else awayScore=Math.max(0,awayScore+n)}
+ window.recordInjury=function(){const p=allPlayers().find(x=>x.id===$x("injuryPlayer").value);if(!p){alert("Selecciona un jugador.");return}beforeAction();stats[p.id]??={goals:0,assists:0,injuries:0};stats[p.id].injuries++;addEvent("🩹 Atención por lesión: "+p.name+" ("+teamName(p.team)+")");vibrate([70,40,70]);renderStats();save()};
+ window.quickEvent=function(name){beforeAction();addEvent("⚡ "+name);if(name.includes("Lesión"))vibrate([70,40,70]);save()};
+ window.recordVAR=function(){
+  beforeAction();const reason=$x("varReason").value,decision=$x("varDecision").value,team=$x("varTeam").value;
+  if(decision==="Gol anulado"){if(team==="home"&&homeScore>0)homeScore--;else if(team==="away"&&awayScore>0)awayScore--;else alert("No hay un gol en ese marcador para anular. La revisión quedará registrada igualmente.")}
+  addEvent("📺 VAR — "+reason+" — "+decision+" ("+teamName(team)+")");
+  updateDisplay();vibrate([80,50,80]);save();
+ };
+ function renderStats(){
+  const box=$x("individualStats");box.replaceChildren();
+  allPlayers().forEach(p=>{const s=stats[p.id]||{goals:0,assists:0,injuries:0};const row=document.createElement("div");row.className="event";row.textContent=p.number+". "+p.name+" ("+teamName(p.team)+") — ⚽ "+s.goals+" goles · 🎯 "+s.assists+" asistencias · 🩹 "+s.injuries+" lesiones";box.append(row)});
+ }
+ function vibrate(pattern){try{if(navigator.vibrate)navigator.vibrate(pattern)}catch(e){}}
+ window.toggleTheme=function(){document.body.classList.toggle("light-theme");localStorage.setItem("arbitroProTheme",document.body.classList.contains("light-theme")?"light":"dark")};
+ window.toggleFullscreen=function(){if(!document.fullscreenElement)document.documentElement.requestFullscreen?.().catch(()=>{});else document.exitFullscreen?.()};
+ function reportText(){
+  const lines=["INFORME ARBITRAL — ÁRBITRO PRO 2026","Partido: "+teamName("home")+" "+homeScore+" - "+awayScore+" "+teamName("away"),"Estado: "+$x("status").textContent,"","ESTADÍSTICAS INDIVIDUALES"];
+  allPlayers().forEach(p=>{const s=stats[p.id]||{goals:0,assists:0,injuries:0};lines.push(p.number+". "+p.name+" ("+teamName(p.team)+") — goles: "+s.goals+", asistencias: "+s.assists+", lesiones: "+s.injuries+(p.expelled?", EXPULSADO":""))});
+  lines.push("","TANDA DE PENALES: "+shoot.home+" - "+shoot.away,"","CRONOLOGÍA");
+  [...$x("events").querySelectorAll(".event")].reverse().forEach(e=>lines.push(e.innerText));
+  lines.push("","TARJETAS", $x("cardRegister").innerText);
+  return lines.join("\n");
+ }
+ window.showMatchReport=function(){const box=$x("reportOutput");box.hidden=false;box.textContent=reportText()};
+ window.exportMatchReport=function(){const text=reportText();const blob=new Blob([text],{type:"text/plain;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="informe-arbitral.txt";a.click();URL.revokeObjectURL(a.href);};
+ // Dorsales editables en la lista de cada equipo.
+ const oldRenderRoster=window.renderRoster;
+ window.renderRoster=function(team){oldRenderRoster(team);const rows=$x(team+"Roster").querySelectorAll(".player-row");rosters[team].forEach((p,i)=>{const row=rows[i];if(!row)return;const num=document.createElement("input");num.type="number";num.min="1";num.max="99";num.value=p.number;num.title="Dorsal";num.style.width="58px";num.addEventListener("change",()=>{p.number=Math.max(1,Math.min(99,parseInt(num.value,10)||1));num.value=p.number;renderPitch();refreshStatPlayers();save()});row.insertBefore(num,row.children[1])})};
+ // Guardar cambios al editar nombres, equipos o duración.
+ document.addEventListener("input",e=>{if(e.target.matches("input,select"))save()});
+ document.addEventListener("change",e=>{if(e.target.matches("input,select"))save()});
+ document.addEventListener("visibilitychange",()=>{if(document.hidden)save()});
+ window.addEventListener("beforeunload",save);
+ const theme=localStorage.getItem("arbitroProTheme");if(theme==="light")document.body.classList.add("light-theme");
+ $x("extraDuration").addEventListener("change",()=>{extraDuration=Math.max(1,Math.min(30,parseInt($x("extraDuration").value,10)||15));$x("extraDuration").value=extraDuration;save()});
+ refreshStatPlayers();renderStats();
+ try{const raw=localStorage.getItem(STORAGE_KEY);if(raw){const s=JSON.parse(raw);if(s&&s.rosters&&confirm("Se encontró un partido guardado. ¿Quieres recuperarlo?"))restore(s)}}catch(e){}
+ setInterval(save,5000);
+})();
+</script>
+
 </html>

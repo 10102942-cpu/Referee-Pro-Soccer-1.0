@@ -123,7 +123,14 @@ label{display:block;margin:8px}
 #soundLibrary .sound-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px;border-bottom:1px solid #28583d;text-align:left;flex-wrap:wrap}
 body.fast-mode #playersStatsPanel,body.fast-mode #quickPanel{display:none!important}
 body.fast-mode #events{max-height:150px}
-@media(max-width:700px){#soundLibrary .sound-row{display:grid;grid-template-columns:1fr 1fr}#soundLibrary .sound-row span{grid-column:1/-1}}</style>
+@media(max-width:700px){#soundLibrary .sound-row{display:grid;grid-template-columns:1fr 1fr}#soundLibrary .sound-row span{grid-column:1/-1}}@media(max-width:700px){
+ #quickPanel{margin-top:6px;padding-top:9px;padding-bottom:10px}
+ #quickPanel h2{margin:4px 0 8px}
+ #quickPanel .controls{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+ #quickPanel .controls button{font-size:12px;padding:9px 4px;min-height:42px}
+}
+@media(max-width:380px){#quickPanel .controls{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
 </head>
 <body>
 <header>
@@ -631,6 +638,25 @@ $("durationInput").addEventListener("change",()=>{
 buildRoster("home");buildRoster("away");
 updateHeadings();renderCardOptions();updateCardRegister();updateDisplay();
 </script>
+
+/* Acerca ACCIONES RÁPIDAS al cronómetro solo en móvil. */
+(()=>{
+ const quick=document.getElementById("quickPanel");
+ const clock=document.getElementById("clock");
+ if(!quick||!clock)return;
+ const timerPanel=clock.closest("section");
+ const originalParent=quick.parentNode;
+ const originalNext=quick.nextElementSibling;
+ const mobile=window.matchMedia("(max-width:700px)");
+ function place(){
+  if(mobile.matches){timerPanel.after(quick)}
+  else if(originalNext&&originalNext.parentNode===originalParent){originalParent.insertBefore(quick,originalNext)}
+  else{originalParent.append(quick)}
+ }
+ place();
+ mobile.addEventListener?.("change",place);
+})();
+
 </body>
 
 <script>

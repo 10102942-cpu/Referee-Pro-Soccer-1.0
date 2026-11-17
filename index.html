@@ -120,7 +120,10 @@ label{display:block;margin:8px}
 .light-theme #reportOutput{background:#edf4ef;color:#17251c}
 @media print{body{background:white!important;color:black!important}header{display:none!important}main>section{display:none!important}#toolsPanel{display:block!important;background:white!important;border:0!important;color:black!important}#toolsPanel>*{display:none!important}#toolsPanel h2,#reportOutput{display:block!important}#reportOutput{white-space:pre-wrap;background:white!important;color:black!important;border:0!important}.panel{break-inside:avoid;border:0!important;color:black!important}}
 
-</style>
+#soundLibrary .sound-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px;border-bottom:1px solid #28583d;text-align:left;flex-wrap:wrap}
+body.fast-mode #playersStatsPanel,body.fast-mode #quickPanel{display:none!important}
+body.fast-mode #events{max-height:150px}
+@media(max-width:700px){#soundLibrary .sound-row{display:grid;grid-template-columns:1fr 1fr}#soundLibrary .sound-row span{grid-column:1/-1}}</style>
 </head>
 <body>
 <header>
@@ -130,7 +133,12 @@ label{display:block;margin:8px}
 <main>
 
 <section class="panel">
-<h2>⏱️ CONFIGURACIÓN</h2>
+<h2>⏱️ CONFIGURACIÓN</h2><label>Tipo de arbitraje</label>
+<select id="matchMode" onchange="setMatchMode(this.value)">
+<option value="normal">⚽ Fútbol normal — registro completo</option>
+<option value="fast">⚡ Fútbol rápido — solo lo esencial</option>
+</select>
+<p class="small" id="modeDescription">Fútbol normal: registra los detalles del partido.</p>
 <label>Duración de cada tiempo (1–45 minutos)</label>
 <input id="durationInput" type="number" min="1" max="45" value="45">
 <p class="small">Descuento máximo: 22,22 % del tiempo normal.</p>
@@ -154,14 +162,14 @@ label{display:block;margin:8px}
 <div>
 <input id="homeName" value="LOCAL">
 <div class="score" id="homeScore">0</div>
-<button onclick="changeScore('home',1)">+ GOL</button>
+<label>Autor del gol</label><select id="homeGoalPlayer"><option value="">Selecciona jugador</option></select><button onclick="registerScoreGoal('home')">+ GOL</button>
 <button class="secondary" onclick="changeScore('home',-1)">−</button>
 </div>
 <div style="font-size:25px">:</div>
 <div>
 <input id="awayName" value="VISITANTE">
 <div class="score" id="awayScore">0</div>
-<button onclick="changeScore('away',1)">+ GOL</button>
+<label>Autor del gol</label><select id="awayGoalPlayer"><option value="">Selecciona jugador</option></select><button onclick="registerScoreGoal('away')">+ GOL</button>
 <button class="secondary" onclick="changeScore('away',-1)">−</button>
 </div>
 </div>
@@ -289,7 +297,15 @@ label{display:block;margin:8px}
 <label>Equipo afectado (si corresponde)</label><select id="varTeam"><option value="home">Local</option><option value="away">Visitante</option></select>
 <button onclick="recordVAR()">📺 REGISTRAR REVISIÓN VAR</button>
 </section>
-<section class="panel" id="toolsPanel">
+<section class="panel" id="soundPanel">
+<h2>🔊 GESTOR DE SONIDOS</h2>
+<p class="small">Añade audios desde tu dispositivo, pruébalos o elimínalos.</p>
+<label>Usar sonido para</label>
+<select id="soundCategory"><option value="whistle">Silbato</option><option value="goal">Gol</option><option value="card">Tarjetas</option><option value="startend">Inicio y final</option><option value="substitution">Sustituciones</option></select>
+<label>Archivo de audio</label><input id="soundFile" type="file" accept="audio/*">
+<button onclick="addCustomSound()">➕ AÑADIR SONIDO</button>
+<div id="soundLibrary" class="events"><div class="small">Todavía no hay sonidos personalizados.</div></div>
+</section><section class="panel" id="toolsPanel">
 <h2>🧾 INFORME Y CONTROLES</h2>
 <div class="controls">
 <button class="secondary" onclick="undoAction()">↶ DESHACER ÚLTIMA ACCIÓN</button>

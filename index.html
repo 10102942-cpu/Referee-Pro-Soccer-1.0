@@ -6,6 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ÁRBITRO PRO 2026</title>
 <link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#07130f">
 </head>
 <body>
 <header>
@@ -13,6 +15,24 @@
 <div class="small">Panel de control arbitral</div>
 </header>
 <main>
+<section class="panel pro-panel" id="matchMetaPanel">
+ <div class="section-kicker">CENTRO DE CONTROL</div><h2>📡 DATOS OFICIALES DEL ENCUENTRO</h2>
+ <div class="pro-grid">
+  <label>Competición<input id="competitionName" placeholder="Liga / Copa / Torneo"></label>
+  <label>Jornada o fase<input id="matchRound" placeholder="Jornada 1 · Final"></label>
+  <label>Fecha y hora<input id="matchDate" type="datetime-local"></label>
+  <label>Estadio / sede<input id="matchVenue" placeholder="Nombre del estadio"></label>
+ </div>
+ <h3>Equipo arbitral</h3>
+ <div class="pro-grid">
+  <label>Árbitro principal<input id="officialReferee" placeholder="Nombre del árbitro"></label>
+  <label>Asistente 1<input id="officialAssistant1" placeholder="Nombre"></label>
+  <label>Asistente 2<input id="officialAssistant2" placeholder="Nombre"></label>
+  <label>Cuarto árbitro<input id="officialFourth" placeholder="Nombre"></label>
+ </div>
+ <div class="pro-actions"><button class="secondary" onclick="saveMatchMetadata()">💾 GUARDAR DATOS</button><span class="small" id="metadataStatus">Datos del encuentro</span></div>
+</section>
+
 
 <section class="panel">
 <h2>⏱️ CONFIGURACIÓN</h2><label>Tipo de arbitraje</label>
@@ -91,6 +111,55 @@
 </div>
 </section>
 
+<section class="panel pro-panel" id="teamDatabasePanel">
+ <div class="section-kicker">BIBLIOTECA LOCAL</div><h2>🗂️ BASE DE DATOS DE EQUIPOS</h2>
+ <p class="small">Guarda equipos y sus plantillas en este dispositivo para reutilizarlos en otros partidos.</p>
+ <div class="pro-grid">
+  <label>Nombre del equipo<input id="dbTeamName" placeholder="Ej. Real Madrid"></label>
+  <label>Nombre corto<input id="dbTeamShort" maxlength="8" placeholder="RMA"></label>
+  <label>Entrenador<input id="dbTeamCoach" placeholder="Nombre del entrenador"></label>
+  <label>Color identificativo<input id="dbTeamColor" type="color" value="#35e879"></label>
+ </div>
+ <label>Jugadores (uno por línea, hasta 30)<textarea id="dbTeamPlayers" rows="5" placeholder="1, Thibaut Courtois&#10;2, Dani Carvajal&#10;3, Éder Militão"></textarea></label>
+ <div class="pro-actions">
+  <button onclick="saveTeamRecord()">＋ GUARDAR EQUIPO</button>
+  <select id="dbTeamSelect" aria-label="Equipos guardados"><option value="">Equipos guardados</option></select>
+  <button class="secondary" onclick="editTeamRecord()">EDITAR SELECCIONADO</button>
+  <button class="danger" onclick="deleteTeamRecord()">ELIMINAR</button>
+ </div>
+ <div class="pro-actions">
+  <button class="secondary" onclick="loadTeamIntoMatch('home')">CARGAR COMO LOCAL</button>
+  <button class="secondary" onclick="loadTeamIntoMatch('away')">CARGAR COMO VISITANTE</button>
+  <span class="small" id="teamDbStatus" aria-live="polite">Base de datos guardada localmente.</span>
+ </div>
+</section>
+<section class="panel pro-panel" id="tournamentPanel">
+ <div class="section-kicker">COMPETICIONES</div><h2>🏆 GESTIÓN DE TORNEOS</h2>
+ <div class="pro-grid">
+  <label>Nombre del torneo<input id="tournamentName" placeholder="Ej. Copa de la Amistad"></label>
+  <label>Torneos guardados<select id="tournamentSelect"><option value="">Selecciona torneo</option></select></label>
+ </div>
+ <div class="pro-actions">
+  <button onclick="createTournament()">＋ CREAR TORNEO</button>
+  <button class="secondary" onclick="selectTournament()">ABRIR TORNEO</button>
+  <button class="danger" onclick="deleteTournament()">ELIMINAR TORNEO</button>
+ </div>
+ <div class="tournament-add">
+  <label>Agregar equipo de la base de datos<select id="tournamentTeamSelect"><option value="">Selecciona un equipo</option></select></label>
+  <button onclick="addTournamentTeam()">＋ AGREGAR EQUIPO</button>
+  <button class="secondary" onclick="generateTournamentFixtures()">⚙ GENERAR TODOS CONTRA TODOS</button>
+ </div>
+ <div id="tournamentTeams" class="team-chip-list"><span class="small">Crea o abre un torneo para comenzar.</span></div>
+ <h3>Calendario y resultados</h3>
+ <div class="pro-grid">
+  <label>Partido del calendario<select id="tournamentFixtureSelect"><option value="">Sin partidos generados</option></select></label>
+  <div class="fixture-actions"><button class="secondary" onclick="loadTournamentFixture()">CARGAR EN MARCADOR</button><button onclick="saveTournamentResult()">GUARDAR RESULTADO ACTUAL</button></div>
+ </div>
+ <div id="tournamentFixtures" class="fixture-list"></div>
+ <h3>Tabla de posiciones</h3>
+ <div class="table-scroll"><table class="standings-table"><thead><tr><th>#</th><th>Equipo</th><th>PJ</th><th>G</th><th>E</th><th>P</th><th>GF</th><th>GC</th><th>DG</th><th>PTS</th></tr></thead><tbody id="tournamentStandings"><tr><td colspan="10">Todavía no hay tabla.</td></tr></tbody></table></div>
+ <p class="small" id="tournamentStatus" aria-live="polite">Los torneos se guardan en este dispositivo.</p>
+</section>
 <section class="panel">
 <h2>🔄 CAMBIOS</h2>
 <label>Equipo</label>
@@ -173,6 +242,27 @@
 <div id="individualStats" class="events"></div>
 </section>
 
+<section class="panel pro-panel" id="matchAnalyticsPanel">
+ <div class="section-kicker">ANÁLISIS EN DIRECTO</div><h2>📊 ESTADÍSTICAS DEL PARTIDO</h2>
+ <p class="small">Registra los datos observados durante el encuentro. La posesión es estimada y debe introducirse manualmente.</p>
+ <div class="analytics-grid">
+  <div class="analytics-team"><h3 id="analyticsHomeName">LOCAL</h3><div class="metric-row"><span>Tiros</span><strong id="homeShots">0</strong><button onclick="changeMatchStat('home','shots',1)">＋</button></div><div class="metric-row"><span>A puerta</span><strong id="homeOnTarget">0</strong><button onclick="changeMatchStat('home','onTarget',1)">＋</button></div><div class="metric-row"><span>Córneres</span><strong id="homeCorners">0</strong><button onclick="changeMatchStat('home','corners',1)">＋</button></div><div class="metric-row"><span>Faltas</span><strong id="homeFouls">0</strong><button onclick="changeMatchStat('home','fouls',1)">＋</button></div><div class="metric-row"><span>Fuera de juego</span><strong id="homeOffsides">0</strong><button onclick="changeMatchStat('home','offsides',1)">＋</button></div><label>Posesión %<input id="homePossession" type="number" min="0" max="100" value="50" onchange="setPossession('home',this.value)"></label></div>
+  <div class="analytics-team"><h3 id="analyticsAwayName">VISITANTE</h3><div class="metric-row"><span>Tiros</span><strong id="awayShots">0</strong><button onclick="changeMatchStat('away','shots',1)">＋</button></div><div class="metric-row"><span>A puerta</span><strong id="awayOnTarget">0</strong><button onclick="changeMatchStat('away','onTarget',1)">＋</button></div><div class="metric-row"><span>Córneres</span><strong id="awayCorners">0</strong><button onclick="changeMatchStat('away','corners',1)">＋</button></div><div class="metric-row"><span>Faltas</span><strong id="awayFouls">0</strong><button onclick="changeMatchStat('away','fouls',1)">＋</button></div><div class="metric-row"><span>Fuera de juego</span><strong id="awayOffsides">0</strong><button onclick="changeMatchStat('away','offsides',1)">＋</button></div><label>Posesión %<input id="awayPossession" type="number" min="0" max="100" value="50" onchange="setPossession('away',this.value)"></label></div>
+ </div>
+ <p class="small" id="possessionBalance">Posesión: 50 % — 50 %</p>
+</section>
+<section class="panel pro-panel" id="incidentPanel">
+ <div class="section-kicker">ACTA DISCIPLINARIA</div><h2>📝 REGISTRO DETALLADO DE INCIDENTES</h2>
+ <div class="pro-grid">
+  <label>Tipo de incidente<select id="incidentType"><option>Conducta antideportiva</option><option>Juego brusco</option><option>Protesta</option><option>Mano</option><option>Simulación</option><option>Impedir ocasión manifiesta</option><option>Conducta violenta</option><option>Invasión de campo</option><option>Retraso en reanudación</option><option>Otro</option></select></label>
+  <label>Equipo<select id="incidentTeam" onchange="refreshIncidentPlayers()"><option value="home">Local</option><option value="away">Visitante</option></select></label>
+  <label>Jugador implicado<select id="incidentPlayer"><option value="">Sin jugador específico</option></select></label>
+  <label>Minuto / referencia<input id="incidentMinute" placeholder="Ej. 34' o 90+2'"></label>
+ </div>
+ <label>Descripción objetiva<textarea id="incidentDescription" rows="3" placeholder="Describe brevemente lo ocurrido, sin opiniones..."></textarea></label>
+ <button onclick="registerDetailedIncident()">＋ REGISTRAR INCIDENTE</button>
+ <div id="incidentHistory" class="events"><div class="small">Los incidentes aparecerán en la cronología del partido.</div></div>
+</section>
 <section class="panel" id="varPanel">
 <h2>📺 REVISIÓN VAR · REGISTRO DE DECISIONES</h2>
 <p class="small">El VAR registra una revisión y su resolución en la cronología. No reproduce vídeo.</p>
@@ -211,6 +301,7 @@
 
 
 <script src="script.js"></script>
+<script src="pro2.js"></script>
 </body>
 
 

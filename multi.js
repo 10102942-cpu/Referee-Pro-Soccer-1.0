@@ -88,6 +88,7 @@
   if(!s||isApplying)return;
   isApplying=true;lastApplied=String(Date.now());
   try{
+   if(remote){clearInterval(interval);interval=null}
    phase=s.phase;currentHalf=s.currentHalf;duration=s.duration;remaining=s.remaining;extraSeconds=s.extraSeconds;extraRemaining=s.extraRemaining;running=s.running;paused=s.paused;
    homeScore=s.homeScore;awayScore=s.awayScore;
    rosters.home=s.rosters.home||[];rosters.away=s.rosters.away||[];
@@ -168,7 +169,9 @@
  window.crewCreateRoom=function(){
   if(peer)return;
   $("crewRole").value="principal";$("crewRole").disabled=true;
-  roomPin=randomPin();host=true;remote=false;peer=makePeer();if(!peer){host=false;return}
+  roomPin=randomPin();host=true;remote=false;
+  if($("officialReferee")&&!$("officialReferee").value.trim()){$("officialReferee").value=displayName();if(typeof window.saveMatchMetadata==="function")window.saveMatchMetadata()}
+  peer=makePeer();if(!peer){host=false;return}setButtons(true);
   status("Creando sala segura…");
   peer.on("open",id=>{
    roomCode=id;$("crewRoomInfo").hidden=false;$("crewRoomCodeDisplay").textContent=id;$("crewPinDisplay").textContent=roomPin;
@@ -185,7 +188,7 @@
   if(!code||!/^\d{6}$/.test(pin)){alert("Introduce el código de sala y el PIN de seis dígitos.");return}
   if(selected==="principal"){alert("Elige Asistente 1, Asistente 2 o 4.º árbitro para unirte.");return}
   peer=makePeer();if(!peer)return;
-  remote=true;host=false;roomCode=code;roomPin=pin;status("Conectando con el árbitro principal…");
+  remote=true;host=false;roomCode=code;roomPin=pin;setButtons(true);status("Conectando con el árbitro principal…");
   const conn=peer.connect(code,{reliable:true,metadata:{pin,name:displayName(),role:selected}});
   connections.set("host",conn);
   conn.on("open",()=>{setButtons(true);setReadonly(true);updateReportPanel();status("Conectado. Esperando los datos del partido…")});

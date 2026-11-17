@@ -1,4 +1,4 @@
-const CACHE="arbitro-pro-v2-4";
+const CACHE="arbitro-pro-v2-5";
 const ASSETS=["./","./index.html","./style.css","./script.js","./pro2.js","./multi.js","./image.png","./sfx.mp3","./manifest.json","./app-icon.svg"];
 self.addEventListener("install",event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener("activate",event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith("arbitro-pro-")&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));

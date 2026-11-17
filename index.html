@@ -123,7 +123,8 @@
  </div>
  <label>Jugadores (uno por línea, hasta 30)<textarea id="dbTeamPlayers" rows="5" placeholder="1, Thibaut Courtois&#10;2, Dani Carvajal&#10;3, Éder Militão"></textarea></label>
  <div class="pro-actions">
-  <button onclick="saveTeamRecord()">＋ GUARDAR EQUIPO</button>
+  <button class="secondary" onclick="startNewTeamRecord()">＋ NUEVO EQUIPO</button>
+  <button onclick="saveTeamRecord()">💾 GUARDAR EQUIPO</button>
   <select id="dbTeamSelect" aria-label="Equipos guardados"><option value="">Equipos guardados</option></select>
   <button class="secondary" onclick="editTeamRecord()">EDITAR SELECCIONADO</button>
   <button class="danger" onclick="deleteTeamRecord()">ELIMINAR</button>
@@ -132,6 +133,7 @@
   <button class="secondary" onclick="loadTeamIntoMatch('home')">CARGAR COMO LOCAL</button>
   <button class="secondary" onclick="loadTeamIntoMatch('away')">CARGAR COMO VISITANTE</button>
   <span class="small" id="teamDbStatus" aria-live="polite">Base de datos guardada localmente.</span>
+  <button class="secondary" onclick="exportAppBackup()">⬇ COPIA DE SEGURIDAD</button><label class="file-import">IMPORTAR COPIA<input id="backupFile" type="file" accept="application/json,.json" onchange="importAppBackup(this.files[0])"></label>
  </div>
 </section>
 <section class="panel pro-panel" id="tournamentPanel">

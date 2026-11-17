@@ -212,3 +212,43 @@ html{scroll-behavior:smooth;scroll-padding-top:64px}
 
 .file-import{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:#315344;color:#fff;padding:11px 14px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;margin:4px}
 .file-import input{display:none}
+
+
+/* ===== EQUIPO ARBITRAL MULTIJUGADOR ===== */
+.crew-panel{border:1px solid #397b53;background:linear-gradient(145deg,#10251b,#0b1c13)}
+.crew-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.crew-grid label,.crew-join-grid label{margin:0;min-width:0}
+.crew-actions{display:flex;gap:9px;flex-wrap:wrap;margin:14px 0}
+.crew-join-grid{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end}
+.crew-room-info{display:flex;gap:12px;flex-wrap:wrap;padding:13px;margin-top:14px;border:1px solid #397b53;border-radius:10px;background:#071810}
+.crew-room-info>div{display:flex;flex-direction:column;gap:5px;min-width:130px;flex:1}
+.crew-room-info strong{font-size:17px;overflow-wrap:anywhere;color:#8ff5ae;letter-spacing:1px}
+.crew-room-info button{align-self:flex-start;margin:4px 0 0}
+.crew-status{padding:10px 12px;border-radius:8px;background:#0a1a12;border:1px solid #28583d;color:#bde7ca;font-size:13px;text-align:left}
+.crew-members-wrap{margin-top:14px}
+.crew-members-wrap h3,.crew-report-box h3{font-size:14px;text-align:left;color:#c6e9d1}
+.crew-members{display:flex;gap:8px;flex-wrap:wrap}
+.crew-member{padding:8px 11px;border:1px solid #397b53;background:#102b1c;border-radius:9px;font-size:12px;display:flex;flex-direction:column;gap:3px;min-width:135px}
+.crew-member strong{color:#baf3cb}
+.crew-member span{color:#9bbba7}
+.crew-report-box{margin-top:16px;padding:14px;border:1px solid #397b53;border-radius:11px;background:#0a1b13;text-align:left}
+.crew-report-box label{margin:9px 0}
+.crew-report-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:12px}
+.crew-report-actions button{font-size:11px;padding:10px 6px;min-height:42px}
+.crew-privacy{font-size:10px;line-height:1.5;color:#8eab99;text-align:left;margin:14px 0 0}
+body.crew-view-only main>section:not(#crewPanel){opacity:.92}
+body.crew-view-only main>section:not(#crewPanel) button,
+body.crew-view-only main>section:not(#crewPanel) input,
+body.crew-view-only main>section:not(#crewPanel) select,
+body.crew-view-only main>section:not(#crewPanel) textarea{cursor:not-allowed}
+.light-theme .crew-panel{background:#f4faf5!important;border-color:#8bb99a!important}
+.light-theme .crew-room-info,.light-theme .crew-status,.light-theme .crew-report-box{background:#eaf4ec!important;color:#173322!important}
+.light-theme .crew-member{background:#fff!important;border-color:#a9cbb3}
+.light-theme .crew-member strong,.light-theme .crew-room-info strong{color:#176335}
+@media(max-width:720px){
+ .crew-grid,.crew-join-grid{grid-template-columns:1fr}
+ .crew-actions{display:grid;grid-template-columns:1fr 1fr}
+ .crew-report-actions{grid-template-columns:1fr 1fr}
+ .crew-room-info{display:grid;grid-template-columns:1fr 1fr}
+}
+@media(max-width:380px){.crew-actions{grid-template-columns:1fr}.crew-report-actions{grid-template-columns:1fr 1fr}.crew-room-info{grid-template-columns:1fr}}

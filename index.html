@@ -631,9 +631,9 @@ updateHeadings();renderCardOptions();updateCardRegister();updateDisplay();
  const safe=(v)=>String(v??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
  function allPlayers(){return [...rosters.home.map(p=>({...p,team:"home"})),...rosters.away.map(p=>({...p,team:"away"}))]}
  function snapshot(){
-  return {phase,currentHalf,duration,remaining,extraSeconds,extraRemaining,running,paused,homeScore,awayScore,
+  return JSON.parse(JSON.stringify({phase,currentHalf,duration,remaining,extraSeconds,extraRemaining,running,paused,homeScore,awayScore,
    rosters:{home:rosters.home,away:rosters.away},players:[...players.entries()],events:$x("events").innerHTML,
-   stats,shoot,shootActive,extraDuration,cardRegister:$x("cardRegister").innerHTML};
+   stats,shoot,shootActive,extraDuration,cardRegister:$x("cardRegister").innerHTML}));
  }
  function restore(s){
   restoring=true;clearInterval(interval);interval=null;

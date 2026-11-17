@@ -163,6 +163,18 @@ body.fast-mode #events{max-height:150px}
 </div>
 </section>
 
+<section class="panel" id="quickPanel">
+<h2>⚡ ACCIONES RÁPIDAS</h2>
+<div class="controls">
+<button onclick="quickEvent('Falta')">🚩 FALTA</button>
+<button onclick="quickEvent('Penalti señalado')">⚽ PENALTI</button>
+<button onclick="quickEvent('Córner')">↗ CÓRNER</button>
+<button onclick="quickEvent('Saque de banda')">↔ SAQUE DE BANDA</button>
+<button onclick="quickEvent('Fuera de juego')">🚩 FUERA DE JUEGO</button>
+<button onclick="quickEvent('Lesión / atención médica')">🩹 LESIÓN</button>
+</div>
+</section>
+
 <section class="panel">
 <h2>🏆 MARCADOR</h2>
 <div class="scoreboard">
@@ -285,17 +297,7 @@ body.fast-mode #events{max-height:150px}
 <button class="secondary" onclick="recordInjury()">🩹 REGISTRAR LESIÓN / ATENCIÓN</button>
 <div id="individualStats" class="events"></div>
 </section>
-<section class="panel" id="quickPanel">
-<h2>⚡ ACCIONES RÁPIDAS</h2>
-<div class="controls">
-<button onclick="quickEvent('Falta')">🚩 FALTA</button>
-<button onclick="quickEvent('Penalti señalado')">⚽ PENALTI</button>
-<button onclick="quickEvent('Córner')">↗ CÓRNER</button>
-<button onclick="quickEvent('Saque de banda')">↔ SAQUE DE BANDA</button>
-<button onclick="quickEvent('Fuera de juego')">🚩 FUERA DE JUEGO</button>
-<button onclick="quickEvent('Lesión / atención médica')">🩹 LESIÓN</button>
-</div>
-</section>
+
 <section class="panel" id="varPanel">
 <h2>📺 REVISIÓN VAR · REGISTRO DE DECISIONES</h2>
 <p class="small">El VAR registra una revisión y su resolución en la cronología. No reproduce vídeo.</p>
@@ -639,25 +641,7 @@ buildRoster("home");buildRoster("away");
 updateHeadings();renderCardOptions();updateCardRegister();updateDisplay();
 </script>
 
-<script>
-/* Acerca ACCIONES RÁPIDAS al cronómetro solo en móvil. */
-(()=>{
- const quick=document.getElementById("quickPanel");
- const clock=document.getElementById("clock");
- if(!quick||!clock)return;
- const timerPanel=clock.closest("section");
- const originalParent=quick.parentNode;
- const originalNext=quick.nextElementSibling;
- const mobile=window.matchMedia("(max-width:700px)");
- function place(){
-  if(mobile.matches){timerPanel.after(quick)}
-  else if(originalNext&&originalNext.parentNode===originalParent){originalParent.insertBefore(quick,originalNext)}
-  else{originalParent.append(quick)}
- }
- place();
- mobile.addEventListener?.("change",place);
-})();
-</script>
+
 
 </body>
 

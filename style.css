@@ -201,3 +201,11 @@ textarea{background:#07130f;color:white;border:1px solid #35e879;border-radius:8
  .fixture-card{font-size:12px;padding:8px}
 }
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+.pro-nav{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;padding:10px 12px;background:#091810;border-bottom:1px solid #28583d;position:sticky;top:0;z-index:20}
+.pro-nav a{color:#c8e8d2;text-decoration:none;font-size:12px;font-weight:800;padding:8px 11px;border-radius:7px}
+.pro-nav a:hover,.pro-nav a:focus-visible{background:#1b3b29;color:#35e879;outline:none}
+html{scroll-behavior:smooth;scroll-padding-top:64px}
+.light-theme .pro-nav{background:#dcebe0;border-color:#a9cbb3}
+.light-theme .pro-nav a{color:#173322}
+@media(max-width:700px){.pro-nav{justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap;white-space:nowrap;scrollbar-width:thin}.pro-nav a{flex:0 0 auto;padding:9px 10px}}

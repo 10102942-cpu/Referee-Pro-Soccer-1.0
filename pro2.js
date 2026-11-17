@@ -17,7 +17,7 @@
  function blankMetrics(){return {shots:0,onTarget:0,corners:0,fouls:0,offsides:0,possession:50}}
  function escapeText(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
  function say(id,msg){if($(id))$(id).textContent=msg}
- function safeTeamName(id){const t=teams.find(x=>x.id===id);return t?t.name:"Equipo"}
+ function safeTeamName(id){const t=teams.find(x=>x.id===id);if(t)return t.name;const active=activeTournament();return active&&active.teamNames&&active.teamNames[id]?active.teamNames[id]:"Equipo"}
  function refreshTeamSelects(){
   ["dbTeamSelect","tournamentTeamSelect"].forEach(id=>{
    const el=$(id);if(!el)return;const prev=el.value;el.replaceChildren(new Option(id==="dbTeamSelect"?"Equipos guardados":"Selecciona un equipo",""));
@@ -87,7 +87,7 @@
  };
  window.createTournament=function(){
   const name=$("tournamentName").value.trim();if(!name){alert("Escribe el nombre del torneo.");return}
-  const t={id:uid(),name,teamIds:[],fixtures:[],createdAt:new Date().toISOString()};
+  const t={id:uid(),name,teamIds:[],teamNames:{},fixtures:[],createdAt:new Date().toISOString()};
   tournaments.push(t);activeTournamentId=t.id;writeStore(TOURNAMENT_KEY,tournaments);refreshTournamentSelect();$("tournamentSelect").value=t.id;renderTournament();say("tournamentStatus","✓ Torneo creado. Ahora agrega los equipos guardados.");
  };
  window.selectTournament=function(){
@@ -104,7 +104,7 @@
   if(!team){alert("Selecciona un equipo de la base de datos.");return}
   if(t.teamIds.includes(id)){alert("Ese equipo ya está en el torneo.");return}
   if(t.fixtures.length){alert("No puedes modificar participantes después de generar el calendario. Elimina el calendario primero.");return}
-  t.teamIds.push(id);writeStore(TOURNAMENT_KEY,tournaments);renderTournament();say("tournamentStatus",team.name+" agregado al torneo.");
+  t.teamIds.push(id);t.teamNames=t.teamNames||{};t.teamNames[id]=team.name;writeStore(TOURNAMENT_KEY,tournaments);renderTournament();say("tournamentStatus",team.name+" agregado al torneo.");
  };
  window.generateTournamentFixtures=function(){
   const t=activeTournament();if(!t){alert("Primero crea o abre un torneo.");return}
@@ -134,7 +134,7 @@
   chips.replaceChildren();fixtures.replaceChildren();body.replaceChildren();
   if(!t){chips.textContent="Crea o abre un torneo para comenzar.";fixtures.textContent="No hay calendario activo.";body.innerHTML='<tr><td colspan="10">Todavía no hay tabla.</td></tr>';refreshFixtureSelect();return}
   $("tournamentName").value=t.name;
-  t.teamIds.forEach(id=>{const chip=document.createElement("span");chip.className="team-chip";chip.textContent=safeTeamName(id);chips.append(chip)});
+  t.teamIds.forEach(id=>{const chip=document.createElement("span");chip.className="team-chip";const label=document.createElement("span");label.textContent=safeTeamName(id);chip.append(label);const remove=document.createElement("button");remove.type="button";remove.textContent="×";remove.title="Quitar equipo";remove.addEventListener("click",()=>{if(t.fixtures.length){alert("Elimina primero el calendario para modificar los participantes.");return}t.teamIds=t.teamIds.filter(x=>x!==id);writeStore(TOURNAMENT_KEY,tournaments);renderTournament()});chip.append(remove);chips.append(chip)});
   if(!t.teamIds.length)chips.textContent="Todavía no hay equipos inscritos.";
   t.fixtures.forEach(f=>{
    const card=document.createElement("div");card.className="fixture-card"+(f.played?" done":"");
@@ -170,7 +170,7 @@
  }
  window.changeMatchStat=function(team,key,amount){
   if(!metrics[team]||!(key in metrics[team])||key==="possession")return;
-  metrics[team][key]=Math.max(0,metrics[team][key]+amount);writeStore(METRICS_KEY,metrics);renderAnalytics();
+  metrics[team][key]=Math.max(0,metrics[team][key]+amount);if(key==="onTarget")metrics[team].shots=Math.max(metrics[team].shots,metrics[team].onTarget);writeStore(METRICS_KEY,metrics);renderAnalytics();
  };
  window.setPossession=function(team,value){
   const n=Math.max(0,Math.min(100,parseInt(value,10)||0));metrics[team].possession=n;metrics[team==="home"?"away":"home"].possession=100-n;
@@ -209,6 +209,6 @@
   const now=new Date();if(!$("matchDate").value){const local=new Date(now.getTime()-now.getTimezoneOffset()*60000);$("matchDate").value=local.toISOString().slice(0,16)}
   if("serviceWorker" in navigator&&location.protocol!=="file:")navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
  }
- document.addEventListener("DOMContentLoaded",init);
+ document.addEventListener("keydown",event=>{if(event.target&&/INPUT|TEXTAREA|SELECT/.test(event.target.tagName))return;if(event.ctrlKey&&event.key.toLowerCase()==="z"&&typeof window.undoAction==="function"){event.preventDefault();window.undoAction();return}if(event.code==="Space"&&typeof window.togglePause==="function"){event.preventDefault();window.togglePause()}else if(event.key.toLowerCase()==="w"&&typeof window.manualWhistle==="function"){event.preventDefault();window.manualWhistle()}});\n document.addEventListener("DOMContentLoaded",init);
  if(document.readyState!=="loading")init();
 })();

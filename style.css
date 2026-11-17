@@ -209,3 +209,6 @@ html{scroll-behavior:smooth;scroll-padding-top:64px}
 .light-theme .pro-nav{background:#dcebe0;border-color:#a9cbb3}
 .light-theme .pro-nav a{color:#173322}
 @media(max-width:700px){.pro-nav{justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap;white-space:nowrap;scrollbar-width:thin}.pro-nav a{flex:0 0 auto;padding:9px 10px}}
+
+.file-import{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:#315344;color:#fff;padding:11px 14px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;margin:4px}
+.file-import input{display:none}

@@ -731,7 +731,7 @@ updateHeadings();renderCardOptions();updateCardRegister();updateDisplay();
   const aid=$x("goalAssist").value,a=allPlayers().find(x=>x.id===aid);
   if(a&&a.id!==id){stats[aid]??={goals:0,assists:0,injuries:0};stats[aid].assists++}
   addEvent("⚽ GOL de "+p.name+" ("+teamName(team)+")"+(a&&a.id!==id?" — asistencia: "+a.name:""));
-  whistle();updateDisplay();renderStats();vibrate(120);save();
+  if(!(window.playCustomSound&&window.playCustomSound("goal")))whistle();updateDisplay();renderStats();vibrate(120);save();
  };
  function homeOrAwayScore(team,n){if(team==="home")homeScore=Math.max(0,homeScore+n);else awayScore=Math.max(0,awayScore+n)}
  window.recordInjury=function(){const p=allPlayers().find(x=>x.id===$x("injuryPlayer").value);if(!p){alert("Selecciona un jugador.");return}beforeAction();stats[p.id]??={goals:0,assists:0,injuries:0};stats[p.id].injuries++;addEvent("🩹 Atención por lesión: "+p.name+" ("+teamName(p.team)+")");vibrate([70,40,70]);renderStats();save()};
@@ -863,7 +863,6 @@ updateHeadings();renderCardOptions();updateCardRegister();updateDisplay();
   window.refreshStatPlayers();
   byId("goalScorer").value=playerId;
   originalGoal();
-  if(window.playCustomSound)window.playCustomSound("goal");
   fillScorerSelectors();
  };
  const originalCard=window.giveCard;
@@ -877,6 +876,7 @@ updateHeadings();renderCardOptions();updateCardRegister();updateDisplay();
    if(!essential)return;
   }
   originalAddEvent(message,time);
+  if(/inicio del|final del/i.test(String(message))&&window.playCustomSound)window.playCustomSound("startend");
  };
  const originalWhistle=window.whistle;
  window.whistle=function(){if(window.playCustomSound&&window.playCustomSound("whistle"))return;originalWhistle()};

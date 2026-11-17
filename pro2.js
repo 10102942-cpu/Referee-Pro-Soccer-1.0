@@ -42,6 +42,7 @@
  function renderMetadata(){
   Object.keys(metadata).forEach(id=>{if($(id)&&!$(id).value)$(id).value=metadata[id]||""});
  }
+ window.startNewTeamRecord=function(){ $("dbTeamSelect").value="";$("dbTeamName").value="";$("dbTeamShort").value="";$("dbTeamCoach").value="";$("dbTeamColor").value="#35e879";$("dbTeamPlayers").value="";say("teamDbStatus","Nuevo equipo: completa los datos y guarda.");};
  window.saveTeamRecord=function(){
   const name=$("dbTeamName").value.trim();if(!name){alert("Escribe el nombre del equipo.");return}
   const lines=$("dbTeamPlayers").value.split(/\r?\n/).map((line,i)=>{
@@ -206,6 +207,13 @@
   box.textContent+=(box.textContent?"\n":"")+lines.join("\n");
  };
  let initialized=false;
+ window.exportAppBackup=function(){
+  const payload={format:"arbitro-pro-backup-v1",exportedAt:new Date().toISOString(),teams,tournaments,metadata,metrics,matchState:localStorage.getItem("arbitroPro2026State_v2"),theme:localStorage.getItem("arbitroProTheme"),mode:localStorage.getItem("arbitroProMatchMode"),sounds:localStorage.getItem("arbitroProSounds")};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="arbitro-pro-copia-"+new Date().toISOString().slice(0,10)+".json";a.click();URL.revokeObjectURL(url);say("teamDbStatus","Copia de seguridad exportada.");
+ };
+ window.importAppBackup=function(file){
+  if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const data=JSON.parse(reader.result);if(data.format!=="arbitro-pro-backup-v1"||!Array.isArray(data.teams)||!Array.isArray(data.tournaments))throw new Error("Formato no reconocido");if(!confirm("Importar esta copia reemplazará la base de equipos y torneos actuales. ¿Continuar?"))return;teams=data.teams;tournaments=data.tournaments;metadata=data.metadata||{};metrics=data.metrics||{home:blankMetrics(),away:blankMetrics()};writeStore(TEAM_KEY,teams);writeStore(TOURNAMENT_KEY,tournaments);writeStore(META_KEY,metadata);writeStore(METRICS_KEY,metrics);if(data.matchState)localStorage.setItem("arbitroPro2026State_v2",data.matchState);if(data.theme)localStorage.setItem("arbitroProTheme",data.theme);if(data.mode)localStorage.setItem("arbitroProMatchMode",data.mode);if(data.sounds)localStorage.setItem("arbitroProSounds",data.sounds);activeTournamentId="";refreshTeamSelects();refreshTournamentSelect();renderTournament();renderAnalytics();renderMetadata();say("teamDbStatus","✓ Copia de seguridad importada. Recarga para recuperar el último partido.");}catch(e){alert("No se pudo importar la copia: "+e.message)}};reader.readAsText(file);
+ };
  function init(){
   if(initialized)return;initialized=true;
   refreshTeamSelects();refreshTournamentSelect();renderTournament();renderAnalytics();renderMetadata();refreshIncidentPlayers();

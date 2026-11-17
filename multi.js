@@ -80,19 +80,19 @@
  }
  function handleIncomingVoiceCall(call){
   if(!peer||!voiceReady){try{call.close()}catch(e){}return}
-  if(voiceEnabled&&String(peer.id).localeCompare(String(call.peer))<0){try{call.close()}catch(e){}return}
+  const current=voiceCalls.get(call.peer),localIsLower=String(peer.id).localeCompare(String(call.peer))<0;
+  if(localIsLower&&voiceEnabled){try{call.close()}catch(e){}return}
+  if(current){try{current.call.close()}catch(e){}voiceCalls.delete(call.peer)}
   try{call.answer(localAudioStream||undefined);attachVoiceCall(call,"incoming")}catch(e){status("No se pudo abrir el audio: "+e.message)}
  }
  function syncVoiceCalls(){
   if(!peer||!voiceEnabled||!peer.id)return;
   const ids=host?Array.from(members.keys()):Array.from(members.values()).map(m=>m.id);
   ids.filter(id=>id&&id!==peer.id).forEach(id=>{
-   const current=voiceCalls.get(id);
-   if(String(peer.id).localeCompare(String(id))<0){
-    if(current&&current.direction==="outgoing"&&current.call.open)return;
-    if(current){try{current.call.close()}catch(e){}voiceCalls.delete(id)}
-    try{const call=peer.call(id,localAudioStream,{metadata:{kind:"referee-voice"}});if(call)attachVoiceCall(call,"outgoing")}catch(e){}
-   }
+   const current=voiceCalls.get(id),localIsLower=String(peer.id).localeCompare(String(id))<0;
+   if(current&&current.call.open&&!(current.direction==="incoming"&&localIsLower))return;
+   if(current){try{current.call.close()}catch(e){}voiceCalls.delete(id)}
+   try{const call=peer.call(id,localAudioStream,{metadata:{kind:"referee-voice"}});if(call)attachVoiceCall(call,"outgoing")}catch(e){}
   });
  }
  async function startVoice(){

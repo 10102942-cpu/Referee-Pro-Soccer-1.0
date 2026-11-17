@@ -9,7 +9,7 @@
  const role=()=> $("crewRole").value;
  const displayName=()=> $("crewName").value.trim().slice(0,32)||roles[role()];
  const randomPin=()=>String(Math.floor(100000+Math.random()*900000));
- const randomRoomId=()=>"ap"+Math.random().toString(36).slice(2,10)+Math.random().toString(36).slice(2,5);
+ const randomRoomId=()=>"ap"+Array.from({length:6},()=> "0123456789abcdefghijklmnopqrstuvwxyz"[Math.floor(Math.random()*36)]).join("");
  function setButtons(connected){
   $("crewCreateBtn").disabled=!!peer;
   $("crewJoinBtn").disabled=!!peer;
@@ -53,9 +53,9 @@
   $("crewRoomInfo").hidden=true;$("crewRoomCodeDisplay").textContent="—";$("crewPinDisplay").textContent="••••••";
   $("crewReportBox").hidden=true;setButtons(false);setReadonly(false);setMembers();
  }
- function makePeer(){
-  if(!window.Peer){status("No se pudo cargar PeerJS. Comprueba la conexión a Internet o que el navegador permita la biblioteca.");return null}
-  try{return new Peer()}catch(e){status("No se pudo iniciar la conexión: "+e.message);return null}
+ function makePeer(id){
+  if(!window.Peer){status("No se pudo cargar PeerJS. Comprueba la conexión a Internet.");return null}
+  try{return id?new Peer(id):new Peer()}catch(e){status("No se pudo iniciar la conexión: "+e.message);return null}
  }
  function getMatchSnapshot(){
   const eventRows=[...$("events").querySelectorAll(".event")].map(row=>({time:row.querySelector("strong")?.textContent||"",text:row.querySelector("span")?.textContent||row.textContent||""}));
@@ -171,38 +171,63 @@
   $("crewRole").value="principal";$("crewRole").disabled=true;
   roomPin=randomPin();host=true;remote=false;
   if($("officialReferee")&&!$("officialReferee").value.trim()){$("officialReferee").value=displayName();if(typeof window.saveMatchMetadata==="function")window.saveMatchMetadata()}
-  peer=makePeer();if(!peer){host=false;return}setButtons(true);
-  status("Creando sala segura…");
-  peer.on("open",id=>{
-   roomCode=id;$("crewRoomInfo").hidden=false;$("crewRoomCodeDisplay").textContent=id;$("crewPinDisplay").textContent=roomPin;
-   $("crewRoomCode").value=id;$("crewPin").value=roomPin;
-   setButtons(true);setMembers();status("Sala lista. Comparte el código y el PIN con tus asistentes.");
-   broadcastTimer=setInterval(broadcastSnapshot,850);
-  });
-  peer.on("connection",conn=>addConnection(conn,conn.metadata));
-  peer.on("error",err=>{status("Conexión: "+(err.type||err.message||"error")+". Si la sala no se crea, inténtalo otra vez.");if(host&&!roomCode&&["unavailable-id","server-error","socket-error"].includes(err.type))window.crewLeaveRoom()});
+  let attempts=0;
+  const start=()=>{
+   const candidate=randomRoomId();
+   peer=makePeer(candidate);
+   if(!peer){host=false;return}
+   setButtons(true);status("Reservando código corto para la sala…");
+   let opened=false;
+   peer.on("open",id=>{
+    opened=true;roomCode=id;
+    $("crewRoomInfo").hidden=false;$("crewRoomCodeDisplay").textContent=id;$("crewPinDisplay").textContent=roomPin;
+    $("crewRoomCode").value=id;$("crewPin").value=roomPin;
+    setButtons(true);setMembers();status("Sala lista. Comparte el código corto y el PIN.");
+    broadcastTimer=setInterval(broadcastSnapshot,850);
+   });
+   peer.on("connection",conn=>addConnection(conn,conn.metadata));
+   peer.on("error",err=>{
+    if(!opened&&err.type==="unavailable-id"&&attempts++<8){
+     try{peer.destroy()}catch(e){} peer=null;start();return;
+    }
+    status("Error de conexión: "+(err.type||err.message||"desconocido")+". Comprueba Internet y vuelve a crear la sala si persiste.");
+    if(!opened)window.crewLeaveRoom();
+   });
+  };
+  start();
  };
  window.crewJoinRoom=function(){
   if(peer)return;
-  const code=$("crewRoomCode").value.trim(),pin=$("crewPin").value.trim(),selected=role();
-  if(!code||!/^\d{6}$/.test(pin)){alert("Introduce el código de sala y el PIN de seis dígitos.");return}
+  const code=$("crewRoomCode").value.trim().toLowerCase(),pin=$("crewPin").value.trim(),selected=role();
+  if(!code||!/^[a-z0-9_-]{4,32}$/.test(code)||!/^[0-9]{6}$/.test(pin)){alert("Introduce el código corto de sala y el PIN de seis dígitos.");return}
   if(selected==="principal"){alert("Elige Asistente 1, Asistente 2 o 4.º árbitro para unirte.");return}
   peer=makePeer();if(!peer)return;
-  remote=true;host=false;roomCode=code;roomPin=pin;setButtons(true);status("Conectando con el árbitro principal…");
-  const conn=peer.connect(code,{reliable:true,metadata:{pin,name:displayName(),role:selected}});
-  connections.set("host",conn);
-  conn.on("open",()=>{setButtons(true);setReadonly(true);updateReportPanel();status("Conectado. Esperando los datos del partido…")});
-  conn.on("data",packet=>{
-   if(packet.type==="rejected"){status(packet.payload?.message||"Acceso rechazado.");crewLeaveRoom();return}
-   if(packet.type==="welcome"){status("Conectado a la sala. Tu función: "+(roles[selected]||selected));updateReportPanel()}
-   if(packet.type==="closed"){status("El árbitro principal cerró la sala.");window.crewLeaveRoom();return}
-   if(packet.type==="snapshot")applySnapshot(packet.payload);
-   if(packet.type==="members"){members.clear();(packet.payload||[]).forEach(m=>members.set(m.id,m));setMembers()}
-   if(packet.type==="reportAck")status(packet.payload?.message||"Aviso enviado.");
+  remote=true;host=false;roomCode=code;roomPin=pin;setButtons(true);status("Conectando al servidor de señalización…");
+  let conn=null,finished=false,timeout=null;
+  const fail=(message)=>{
+   if(finished)return;finished=true;if(timeout)clearTimeout(timeout);status(message);
+   if(conn){try{conn.close()}catch(e){}}
+   if(peer){try{peer.destroy()}catch(e){}}
+   peer=null;remote=false;connections.clear();setButtons(false);updateReportPanel();setReadonly(false);
+  };
+  peer.on("open",()=>{
+   status("Servidor conectado. Buscando la sala "+code+"…");
+   conn=peer.connect(code,{reliable:true,metadata:{pin,name:displayName(),role:selected}});
+   connections.set("host",conn);
+   timeout=setTimeout(()=>{if(!conn.open)fail("No se pudo unir: la sala no respondió. Revisa el código y que el árbitro principal siga conectado.")},18000);
+   conn.on("open",()=>{if(timeout)clearTimeout(timeout);setButtons(true);setReadonly(true);updateReportPanel();status("Canal conectado. Verificando acceso…")});
+   conn.on("data",packet=>{
+    if(packet.type==="rejected"){status(packet.payload?.message||"Acceso rechazado.");window.crewLeaveRoom();return}
+    if(packet.type==="welcome"){finished=true;status("¡Conectado! Tu función: "+(roles[selected]||selected));updateReportPanel()}
+    if(packet.type==="snapshot")applySnapshot(packet.payload);
+    if(packet.type==="members"){members.clear();(packet.payload||[]).forEach(m=>members.set(m.id,m));setMembers()}
+    if(packet.type==="reportAck")status(packet.payload?.message||"Aviso enviado.");
+    if(packet.type==="closed"){status("El árbitro principal cerró la sala.");window.crewLeaveRoom()}
+   });
+   conn.on("close",()=>{if(!finished)fail("Se cerró la conexión antes de completar el acceso. Comprueba que la sala siga activa.");else{status("Se perdió la conexión con la sala.");window.crewLeaveRoom()}});
+   conn.on("error",()=>fail("No se pudo completar el canal de datos. Comprueba la red y vuelve a intentarlo."));
   });
-  conn.on("close",()=>{status("Se perdió la conexión con la sala.");crewLeaveRoom()});
-  conn.on("error",()=>status("No se pudo completar la conexión. Comprueba el código, el PIN y la red."));
-  peer.on("error",err=>status("Conexión: "+(err.type||err.message||"error")));
+  peer.on("error",err=>fail("No se pudo localizar la sala ("+(err.type||err.message||"error")+"). Comprueba el código, el PIN y la conexión a Internet."));
  };
  window.crewSendReport=function(kind){
   if(!remote||!connections.has("host"))return;

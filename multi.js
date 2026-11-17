@@ -1,0 +1,229 @@
+/* ÁRBITRO PRO 2.0 · COLABORACIÓN DEL EQUIPO ARBITRAL */
+(()=>{
+ "use strict";
+ const $=id=>document.getElementById(id);
+ let peer=null,host=false,remote=false,roomPin="",roomCode="",connections=new Map(),members=new Map(),broadcastTimer=null;
+ let lastApplied="",isApplying=false,readonlySaved=[];
+ const roles={principal:"1.er árbitro · Principal",assistant1:"Asistente 1",assistant2:"Asistente 2",fourth:"4.º árbitro"};
+ const status=(msg)=>{if($("crewStatus"))$("crewStatus").textContent=msg};
+ const role=()=> $("crewRole").value;
+ const displayName=()=> $("crewName").value.trim().slice(0,32)||roles[role()];
+ const randomPin=()=>String(Math.floor(100000+Math.random()*900000));
+ const randomRoomId=()=>"ap"+Math.random().toString(36).slice(2,10)+Math.random().toString(36).slice(2,5);
+ function setButtons(connected){
+  $("crewCreateBtn").disabled=!!peer;
+  $("crewJoinBtn").disabled=!!peer;
+  $("crewLeaveBtn").disabled=!peer;
+  $("crewRole").disabled=!!peer;
+  $("crewName").disabled=!!peer;
+ }
+ function setReadonly(on){
+  if(on&&!remote)return;
+  if(on){
+   document.body.classList.add("crew-view-only");
+   readonlySaved=[];
+   document.querySelectorAll("main>section:not(#crewPanel) button,main>section:not(#crewPanel) input,main>section:not(#crewPanel) select,main>section:not(#crewPanel) textarea").forEach(el=>{
+    readonlySaved.push([el,el.disabled]);el.disabled=true;
+   });
+  }else{
+   document.body.classList.remove("crew-view-only");
+   readonlySaved.forEach(([el,wasDisabled])=>{if(el&&el.isConnected)el.disabled=wasDisabled});
+   readonlySaved=[];
+  }
+ }
+ function setMembers(){
+  const box=$("crewMembers");box.replaceChildren();
+  const list=[{name:host?displayName():"Árbitro principal",role:"principal",id:"host",online:true},...Array.from(members.values())];
+  if(!peer&&!remote){box.textContent="Solo este dispositivo.";return}
+  list.forEach(m=>{
+   const card=document.createElement("div");card.className="crew-member";
+   const name=document.createElement("strong"),label=document.createElement("span");
+   name.textContent=m.name||"Árbitro";label.textContent=roles[m.role]||m.role;
+   const dot=document.createElement("span");dot.textContent="● Conectado";dot.style.color="#55e98a";
+   card.append(name,label,dot);box.append(card);
+  });
+ }
+ function updateReportPanel(){
+  const joined=remote;
+  $("crewReportBox").hidden=!joined;
+  $("crewAssistantActions").hidden=!joined||!["assistant1","assistant2"].includes(role());
+  $("crewFourthActions").hidden=!joined||role()!=="fourth";
+ }
+ function resetRoomUI(){
+  $("crewRoomInfo").hidden=true;$("crewRoomCodeDisplay").textContent="—";$("crewPinDisplay").textContent="••••••";
+  $("crewReportBox").hidden=true;setButtons(false);setReadonly(false);setMembers();
+ }
+ function makePeer(){
+  if(!window.Peer){status("No se pudo cargar PeerJS. Comprueba la conexión a Internet o que el navegador permita la biblioteca.");return null}
+  try{return new Peer()}catch(e){status("No se pudo iniciar la conexión: "+e.message);return null}
+ }
+ function getMatchSnapshot(){
+  const eventRows=[...$("events").querySelectorAll(".event")].map(row=>({time:row.querySelector("strong")?.textContent||"",text:row.querySelector("span")?.textContent||row.textContent||""}));
+  const incidentRows=[...$("incidentHistory").querySelectorAll(".event")].map(row=>({time:row.querySelector("strong")?.textContent||"",text:row.querySelector("span")?.textContent||row.textContent||""}));
+  const metrics=(()=>{try{return JSON.parse(localStorage.getItem("arbitroPro_matchMetrics_v1"))}catch(e){return null}})();
+  const meta={};["competitionName","matchRound","matchDate","matchVenue","officialReferee","officialAssistant1","officialAssistant2","officialFourth"].forEach(id=>meta[id]=$(id).value);
+  return {
+   phase,currentHalf,duration,remaining,extraSeconds,extraRemaining,running,paused,homeScore,awayScore,
+   rosters:{home:JSON.parse(JSON.stringify(rosters.home)),away:JSON.parse(JSON.stringify(rosters.away))},
+   players:Array.from(players.entries()),events:eventRows,incidents:incidentRows,
+   cards:[...$("cardRegister").querySelectorAll(".card-player")].map(x=>x.textContent),
+   individual:[...$("individualStats").querySelectorAll(".event")].map(x=>x.textContent),
+   metrics,meta,homeName:$("homeName").value,awayName:$("awayName").value,
+   clock:$("clock").textContent,status:$("status").textContent,extraBanner:$("extraBanner").textContent,
+   homeCount:$("homeCount").value,awayCount:$("awayCount").value,
+   mode:$("matchMode").value,matchTime:typeof window.currentMatchTime==="function"?window.currentMatchTime():""
+  };
+ }
+ function appendTextRows(container,rows){
+  container.replaceChildren();
+  if(!rows||!rows.length){const empty=document.createElement("div");empty.className="small";empty.textContent="Todavía no hay registros.";container.append(empty);return}
+  rows.forEach(row=>{
+   const item=document.createElement("div");item.className="event";
+   const stamp=document.createElement("strong");stamp.textContent=row.time||"";
+   const text=document.createElement("span");text.textContent=row.text||"";
+   item.append(stamp,text);container.append(item);
+  });
+ }
+ function applySnapshot(s){
+  if(!s||isApplying)return;
+  isApplying=true;lastApplied=String(Date.now());
+  try{
+   phase=s.phase;currentHalf=s.currentHalf;duration=s.duration;remaining=s.remaining;extraSeconds=s.extraSeconds;extraRemaining=s.extraRemaining;running=s.running;paused=s.paused;
+   homeScore=s.homeScore;awayScore=s.awayScore;
+   rosters.home=s.rosters.home||[];rosters.away=s.rosters.away||[];
+   players.clear();(s.players||[]).forEach(([id,p])=>players.set(id,p));
+   $("homeName").value=s.homeName||"LOCAL";$("awayName").value=s.awayName||"VISITANTE";
+   $("homeCount").value=s.homeCount||rosters.home.length;$("awayCount").value=s.awayCount||rosters.away.length;
+   $("homeScore").textContent=homeScore;$("awayScore").textContent=awayScore;
+   $("clock").textContent=s.clock||"00:00";$("status").textContent=s.status||"PREPARADO";$("extraBanner").textContent=s.extraBanner||"";
+   if(s.meta)Object.entries(s.meta).forEach(([id,value])=>{if($(id))$(id).value=value||""});
+   $("analyticsHomeName").textContent=$("homeName").value;$("analyticsAwayName").textContent=$("awayName").value;
+   if(s.metrics){
+    ["home","away"].forEach(team=>Object.entries(s.metrics[team]||{}).forEach(([key,value])=>{
+     const id=team+key[0].toUpperCase()+key.slice(1);if($(id))$(id).textContent=value;
+     if($(team+"Possession")&&key==="possession")$(team+"Possession").value=value;
+    }));
+    $("possessionBalance").textContent="Posesión estimada: "+s.metrics.home.possession+" % — "+s.metrics.away.possession+" %";
+   }
+   if(typeof renderRoster==="function"){renderRoster("home");renderRoster("away")}
+   if(typeof renderPitch==="function")renderPitch();
+   if(typeof updateHeadings==="function")updateHeadings();
+   if(typeof updateSubOptions==="function")updateSubOptions();
+   if(typeof renderCardOptions==="function")renderCardOptions();
+   if(typeof updateDisplay==="function")updateDisplay();
+   appendTextRows($("events"),s.events);
+   $("cardRegister").replaceChildren();
+   (s.cards||[]).forEach(text=>{const row=document.createElement("div");row.className="card-player";row.textContent=text;$("cardRegister").append(row)});
+   if(!(s.cards||[]).length)$("cardRegister").textContent="Todavía no hay tarjetas.";
+   appendTextRows($("individualStats"),s.individual);
+   appendTextRows($("incidentHistory"),s.incidents);
+   if($("modeDescription"))window.setMatchMode(s.mode||"normal");
+  }catch(e){status("No se pudo actualizar el partido compartido: "+e.message)}
+  finally{isApplying=false}
+ }
+ function send(conn,data){try{if(conn&&conn.open)conn.send(data)}catch(e){}}
+ function broadcast(type,payload){
+  const packet={type,payload};
+  connections.forEach(conn=>send(conn,packet));
+ }
+ function broadcastSnapshot(){if(host&&connections.size)broadcast("snapshot",getMatchSnapshot())}
+ function updateCrewListPacket(){broadcast("members",Array.from(members.values()))}
+ function handleReport(packet,conn){
+  if(!host||!packet||packet.type!=="report")return;
+  const p=packet.payload||{},kind=String(p.kind||"Aviso").slice(0,60),who=String(p.name||"Árbitro").slice(0,32),roleName=roles[p.role]||"Equipo arbitral";
+  const team=p.team==="home"||p.team==="away"?p.team:"none";
+  const player=String(p.player||"").slice(0,40),detail=String(p.detail||"").slice(0,180);
+  const teamLabel=team==="none"?"":(" · "+(team==="home"?teamName("home"):teamName("away")));
+  const text="📡 "+roleName+" ("+who+") · "+kind+teamLabel+(player?" · "+player:"")+(detail?" · "+detail:"");
+  if(typeof window.addEvent==="function")window.addEvent(text);
+  if(team!=="none"&&typeof window.changeMatchStat==="function"){
+   if(kind==="Falta observada")window.changeMatchStat(team,"fouls",1);
+   if(kind==="Córner")window.changeMatchStat(team,"corners",1);
+   if(kind==="Fuera de juego")window.changeMatchStat(team,"offsides",1);
+  }
+  send(conn,{type:"reportAck",payload:{ok:true,message:"Aviso recibido por el árbitro principal."}});
+  broadcastSnapshot();
+ }
+ function addConnection(conn,metadata){
+  conn.on("open",()=>{
+   const m=metadata||conn.metadata||{};
+   if(String(m.pin||"")!==roomPin){send(conn,{type:"rejected",payload:{message:"PIN incorrecto."}});setTimeout(()=>conn.close(),250);return}
+   const currentRole=String(m.role||"assistant1");
+   if(!["assistant1","assistant2","fourth"].includes(currentRole)){send(conn,{type:"rejected",payload:{message:"Solo pueden entrar los asistentes y el cuarto árbitro."}});setTimeout(()=>conn.close(),250);return}
+   if(members.size>=3){send(conn,{type:"rejected",payload:{message:"La sala ya tiene los tres puestos de apoyo ocupados."}});setTimeout(()=>conn.close(),250);return}
+   if([...members.values()].some(x=>x.role===currentRole)){send(conn,{type:"rejected",payload:{message:"Ese puesto ya está ocupado. Elige otra función."}});setTimeout(()=>conn.close(),250);return}
+   const member={id:conn.peer,name:String(m.name||"Árbitro").slice(0,32),role:currentRole};
+   members.set(conn.peer,member);connections.set(conn.peer,conn);
+   send(conn,{type:"welcome",payload:{room:roomCode,role:currentRole}});
+   send(conn,{type:"snapshot",payload:getMatchSnapshot()});
+   updateCrewListPacket();status("Sala activa. "+members.size+" árbitro(s) de apoyo conectado(s).");
+   conn.on("data",data=>handleReport(data,conn));
+   conn.on("close",()=>{members.delete(conn.peer);connections.delete(conn.peer);updateCrewListPacket();status("Conexión actualizada. "+members.size+" árbitro(s) de apoyo conectado(s).")});
+   conn.on("error",()=>{members.delete(conn.peer);connections.delete(conn.peer);updateCrewListPacket()});
+  });
+ }
+ window.crewCreateRoom=function(){
+  if(peer)return;
+  $("crewRole").value="principal";$("crewRole").disabled=true;
+  roomPin=randomPin();host=true;remote=false;peer=makePeer();if(!peer){host=false;return}
+  status("Creando sala segura…");
+  peer.on("open",id=>{
+   roomCode=id;$("crewRoomInfo").hidden=false;$("crewRoomCodeDisplay").textContent=id;$("crewPinDisplay").textContent=roomPin;
+   $("crewRoomCode").value=id;$("crewPin").value=roomPin;
+   setButtons(true);setMembers();status("Sala lista. Comparte el código y el PIN con tus asistentes.");
+   broadcastTimer=setInterval(broadcastSnapshot,850);
+  });
+  peer.on("connection",conn=>addConnection(conn,conn.metadata));
+  peer.on("error",err=>status("Conexión: "+(err.type||err.message||"error")+". Si la sala no se crea, inténtalo otra vez."));
+ };
+ window.crewJoinRoom=function(){
+  if(peer)return;
+  const code=$("crewRoomCode").value.trim(),pin=$("crewPin").value.trim(),selected=role();
+  if(!code||!/^\d{6}$/.test(pin)){alert("Introduce el código de sala y el PIN de seis dígitos.");return}
+  if(selected==="principal"){alert("Elige Asistente 1, Asistente 2 o 4.º árbitro para unirte.");return}
+  peer=makePeer();if(!peer)return;
+  remote=true;host=false;roomCode=code;roomPin=pin;status("Conectando con el árbitro principal…");
+  const conn=peer.connect(code,{reliable:true,metadata:{pin,name:displayName(),role:selected}});
+  connections.set("host",conn);
+  conn.on("open",()=>{setButtons(true);setReadonly(true);updateReportPanel();status("Conectado. Esperando los datos del partido…")});
+  conn.on("data",packet=>{
+   if(packet.type==="rejected"){status(packet.payload?.message||"Acceso rechazado.");crewLeaveRoom();return}
+   if(packet.type==="welcome"){status("Conectado a la sala. Tu función: "+(roles[selected]||selected));updateReportPanel()}
+   if(packet.type==="snapshot")applySnapshot(packet.payload);
+   if(packet.type==="members"){members.clear();(packet.payload||[]).forEach(m=>members.set(m.id,m));setMembers()}
+   if(packet.type==="reportAck")status(packet.payload?.message||"Aviso enviado.");
+  });
+  conn.on("close",()=>{status("Se perdió la conexión con la sala.");crewLeaveRoom()});
+  conn.on("error",()=>status("No se pudo completar la conexión. Comprueba el código, el PIN y la red."));
+  peer.on("error",err=>status("Conexión: "+(err.type||err.message||"error")));
+ };
+ window.crewSendReport=function(kind){
+  if(!remote||!connections.has("host"))return;
+  const payload={kind,role:role(),name:displayName(),team:$("crewReportTeam").value,player:$("crewReportPlayer").value.trim(),detail:$("crewReportDetail").value.trim()};
+  send(connections.get("host"),{type:"report",payload});
+  status("Aviso enviado al árbitro principal: "+kind+".");
+  $("crewReportDetail").value="";
+ };
+ window.crewCopyInvite=function(){
+  const text="ÁRBITRO PRO · Sala: "+roomCode+" · PIN: "+roomPin;
+  if(navigator.clipboard?.writeText)navigator.clipboard.writeText(text).then(()=>status("Invitación copiada.")).catch(()=>status("No se pudo copiar automáticamente; copia el código y PIN manualmente."));
+  else status("Copia manualmente el código y el PIN.");
+ };
+ window.crewLeaveRoom=function(){
+  if(broadcastTimer){clearInterval(broadcastTimer);broadcastTimer=null}
+  if(host)connections.forEach(conn=>{send(conn,{type:"closed",payload:{message:"El árbitro principal cerró la sala."}});conn.close()});
+  connections.clear();members.clear();
+  if(peer){try{peer.destroy()}catch(e){}}
+  peer=null;host=false;remote=false;roomPin="";roomCode="";
+  resetRoomUI();status("Modo individual: el partido sigue funcionando en este dispositivo.");
+  updateReportPanel();setMembers();
+ };
+ function init(){
+  $("crewName").value="";
+  $("crewRole").value="principal";
+  $("crewRole").addEventListener("change",updateReportPanel);
+  updateReportPanel();setButtons(false);setMembers();
+ }
+ document.addEventListener("DOMContentLoaded",init);
+ if(document.readyState!=="loading")init();
+})();

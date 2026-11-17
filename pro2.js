@@ -68,12 +68,12 @@
   teams=teams.filter(x=>x.id!==id);writeStore(TEAM_KEY,teams);refreshTeamSelects();say("teamDbStatus","Equipo eliminado.");
  };
  window.loadTeamIntoMatch=function(side){
-  const t=teams.find(x=>x.id===$("dbTeamSelect").value);if(!t){alert("Selecciona un equipo guardado.");return}
-  if(rosters[side].length&&!confirm("¿Reemplazar la plantilla actual del "+(side==="home"?"local":"visitante")+"?"))return;
+  const t=teams.find(x=>x.id===$("dbTeamSelect").value);if(!t){alert("Selecciona un equipo guardado.");return false}
+  if(rosters[side].length&&!confirm("¿Reemplazar la plantilla actual del "+(side==="home"?"local":"visitante")+"?"))return false;
   rosters[side].forEach(p=>players.delete(p.id));rosters[side]=[];if(typeof updateCardRegister==="function")updateCardRegister();
   const count=Math.max(1,Math.min(30,(t.players||[]).length||11));
   $(side+"Count").value=count;
-  window.buildRoster(side)
+  window.buildRoster(side);
   const list=rosters[side];
   (t.players||[]).forEach((p,i)=>{if(list[i]){list[i].name=p.name;list[i].number=p.number||i+1}});
   if($(side+"Name"))$(side+"Name").value=t.name;
@@ -83,8 +83,8 @@
   if(typeof updateSubOptions==="function")updateSubOptions();
   if(typeof renderCardOptions==="function")renderCardOptions();
   if(typeof refreshStatPlayers==="function")refreshStatPlayers();
-  if(typeof fillScorerSelectors==="function")fillScorerSelectors();
   renderAnalyticsNames();say("teamDbStatus","✓ "+t.name+" cargado como "+(side==="home"?"local":"visitante")+".");
+  return true;
  };
  window.createTournament=function(){
   const name=$("tournamentName").value.trim();if(!name){alert("Escribe el nombre del torneo.");return}
@@ -150,9 +150,10 @@
  window.loadTournamentFixture=function(){
   const t=activeTournament(),f=t&&t.fixtures.find(x=>x.id===$("tournamentFixtureSelect").value);if(!f){alert("Selecciona un partido del calendario.");return}
   const home=teams.find(x=>x.id===f.homeId),away=teams.find(x=>x.id===f.awayId);if(!home||!away){alert("Falta un equipo en la base de datos.");return}
-  $("dbTeamSelect").value=home.id;loadTeamIntoMatch("home");$("dbTeamSelect").value=away.id;loadTeamIntoMatch("away");
-  $("competitionName").value=t.name;$("matchRound").value="Jornada "+f.round;window.saveMatchMetadata();
   if(running&&!confirm("El cronómetro está activo. ¿Cargar de todas formas y reiniciar el marcador?"))return;
+  $("dbTeamSelect").value=home.id;if(loadTeamIntoMatch("home")!==true)return;
+  $("dbTeamSelect").value=away.id;if(loadTeamIntoMatch("away")!==true)return;
+  $("competitionName").value=t.name;$("matchRound").value="Jornada "+f.round;window.saveMatchMetadata();
   clearInterval(interval);interval=null;running=false;paused=false;phase="ready";currentHalf=0;remaining=0;extraSeconds=0;extraRemaining=0;homeScore=f.played?f.homeGoals:0;awayScore=f.played?f.awayGoals:0;updateDisplay();
   say("tournamentStatus","Partido cargado en el marcador.");
  };

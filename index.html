@@ -14,7 +14,7 @@
 <h1>⚽ ÁRBITRO PRO 2026</h1>
 <div class="small">Panel de control arbitral</div>
 </header>
-<nav class="pro-nav" aria-label="Navegación principal"><a href="#matchMetaPanel">Partido</a><a href="#teamDatabasePanel">Equipos</a><a href="#tournamentPanel">Torneos</a><a href="#matchAnalyticsPanel">Estadísticas</a><a href="#incidentPanel">Incidentes</a><a href="#varPanel">VAR</a></nav>
+<nav class="pro-nav" aria-label="Navegación principal"><a href="#crewPanel">Equipo arbitral</a><a href="#matchMetaPanel">Partido</a><a href="#teamDatabasePanel">Equipos</a><a href="#tournamentPanel">Torneos</a><a href="#matchAnalyticsPanel">Estadísticas</a><a href="#incidentPanel">Incidentes</a><a href="#varPanel">VAR</a></nav>
 <main>
 <section class="panel pro-panel" id="matchMetaPanel">
  <div class="section-kicker">CENTRO DE CONTROL</div><h2>📡 DATOS OFICIALES DEL ENCUENTRO</h2>
@@ -35,6 +35,50 @@
 </section>
 
 
+<section class="panel pro-panel crew-panel" id="crewPanel">
+ <div class="section-kicker">COLABORACIÓN OPCIONAL · TIEMPO REAL</div>
+ <h2>🎧 EQUIPO ARBITRAL MULTIJUGADOR</h2>
+ <p class="small">¿Estás solo? No necesitas activar nada. Si hay más árbitros, crea una sala desde el dispositivo del árbitro principal y comparte el código y el PIN.</p>
+ <div class="crew-grid">
+  <label>Tu nombre<input id="crewName" maxlength="32" placeholder="Nombre del árbitro"></label>
+  <label>Tu función<select id="crewRole"><option value="principal">1.er árbitro · Principal</option><option value="assistant1">Asistente 1</option><option value="assistant2">Asistente 2</option><option value="fourth">4.º árbitro</option></select></label>
+ </div>
+ <div class="crew-actions">
+  <button id="crewCreateBtn" onclick="crewCreateRoom()">＋ CREAR SALA</button>
+  <button class="secondary" id="crewLeaveBtn" onclick="crewLeaveRoom()" disabled>DESCONECTAR</button>
+ </div>
+ <div class="crew-join-grid">
+  <label>Código de sala<input id="crewRoomCode" maxlength="80" autocapitalize="none" spellcheck="false" placeholder="Código del árbitro principal"></label>
+  <label>PIN de acceso<input id="crewPin" maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="6 dígitos"></label>
+  <button class="secondary" id="crewJoinBtn" onclick="crewJoinRoom()">🔗 UNIRME A LA SALA</button>
+ </div>
+ <div class="crew-room-info" id="crewRoomInfo" hidden>
+  <div><span class="small">CÓDIGO DE SALA</span><strong id="crewRoomCodeDisplay">—</strong><button class="secondary" onclick="crewCopyInvite()">COPIAR INVITACIÓN</button></div>
+  <div><span class="small">PIN PRIVADO</span><strong id="crewPinDisplay">••••••</strong></div>
+ </div>
+ <p id="crewStatus" class="crew-status" aria-live="polite">Modo individual: el partido funciona con normalidad sin conectar a nadie.</p>
+ <div class="crew-members-wrap"><h3>Árbitros conectados</h3><div id="crewMembers" class="crew-members"><span class="small">Solo este dispositivo.</span></div></div>
+ <div id="crewReportBox" class="crew-report-box" hidden>
+  <h3>📨 Enviar aviso al árbitro principal</h3>
+  <p class="small">Tus avisos se incorporan a la cronología compartida. El árbitro principal conserva el control del marcador y las decisiones oficiales.</p>
+  <label>Equipo relacionado<select id="crewReportTeam"><option value="home">Local</option><option value="away">Visitante</option><option value="none">No corresponde</option></select></label>
+  <label>Jugador (opcional)<input id="crewReportPlayer" maxlength="40" placeholder="Nombre o dorsal"></label>
+  <label>Detalle (opcional)<input id="crewReportDetail" maxlength="180" placeholder="Breve observación"></label>
+  <div id="crewAssistantActions" class="crew-report-actions">
+   <button onclick="crewSendReport('Fuera de juego')">🚩 FUERA DE JUEGO</button>
+   <button onclick="crewSendReport('Falta observada')">⚑ FALTA</button>
+   <button onclick="crewSendReport('Córner')">↗ CÓRNER</button>
+   <button onclick="crewSendReport('Saque de banda')">↔ SAQUE DE BANDA</button>
+  </div>
+  <div id="crewFourthActions" class="crew-report-actions" hidden>
+   <button onclick="crewSendReport('Solicitud de sustitución')">🔄 SOLICITUD DE CAMBIO</button>
+   <button onclick="crewSendReport('Incidencia en banquillos')">📝 INCIDENCIA EN BANQUILLOS</button>
+   <button onclick="crewSendReport('Aviso de tiempo añadido')">⏱️ AVISO DE TIEMPO</button>
+   <button onclick="crewSendReport('Observación del cuarto árbitro')">📨 ENVIAR OBSERVACIÓN</button>
+  </div>
+ </div>
+ <p class="crew-privacy">Conexión de datos entre navegadores. No activa cámara ni micrófono. Se utiliza el servicio de señalización PeerJS para establecer la conexión; los datos del partido viajan directamente entre dispositivos mediante WebRTC cuando la red lo permite.</p>
+</section>
 <section class="panel">
 <h2>⏱️ CONFIGURACIÓN</h2><label>Tipo de arbitraje</label>
 <select id="matchMode" onchange="setMatchMode(this.value)">
@@ -305,6 +349,8 @@
 
 <script src="script.js"></script>
 <script src="pro2.js"></script>
+<script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
+<script src="multi.js"></script>
 </body>
 
 

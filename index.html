@@ -298,13 +298,9 @@ body.fast-mode #events{max-height:150px}
 <button onclick="recordVAR()">📺 REGISTRAR REVISIÓN VAR</button>
 </section>
 <section class="panel" id="soundPanel">
-<h2>🔊 GESTOR DE SONIDOS</h2>
-<p class="small">Añade audios desde tu dispositivo, pruébalos o elimínalos.</p>
-<label>Usar sonido para</label>
-<select id="soundCategory"><option value="whistle">Silbato</option><option value="goal">Gol</option><option value="card">Tarjetas</option><option value="startend">Inicio y final</option><option value="substitution">Sustituciones</option></select>
-<label>Archivo de audio</label><input id="soundFile" type="file" accept="audio/*">
-<button onclick="addCustomSound()">➕ AÑADIR SONIDO</button>
-<div id="soundLibrary" class="events"><div class="small">Todavía no hay sonidos personalizados.</div></div>
+<h2>🔊 SONIDO DEL ÁRBITRO</h2>
+<p class="small">Activa o silencia el audio original del silbato.</p>
+<button class="secondary" id="soundToggle" onclick="toggleSounds()">🔊 SONIDO ACTIVADO</button>
 </section><section class="panel" id="toolsPanel">
 <h2>🧾 INFORME Y CONTROLES</h2>
 <div class="controls">
@@ -731,7 +727,7 @@ updateHeadings();renderCardOptions();updateCardRegister();updateDisplay();
   const aid=$x("goalAssist").value,a=allPlayers().find(x=>x.id===aid);
   if(a&&a.id!==id){stats[aid]??={goals:0,assists:0,injuries:0};stats[aid].assists++}
   addEvent("⚽ GOL de "+p.name+" ("+teamName(team)+")"+(a&&a.id!==id?" — asistencia: "+a.name:""));
-  if(!(window.playCustomSound&&window.playCustomSound("goal")))whistle();updateDisplay();renderStats();vibrate(120);save();
+  whistle();updateDisplay();renderStats();vibrate(120);save();
  };
  function homeOrAwayScore(team,n){if(team==="home")homeScore=Math.max(0,homeScore+n);else awayScore=Math.max(0,awayScore+n)}
  window.recordInjury=function(){const p=allPlayers().find(x=>x.id===$x("injuryPlayer").value);if(!p){alert("Selecciona un jugador.");return}beforeAction();stats[p.id]??={goals:0,assists:0,injuries:0};stats[p.id].injuries++;addEvent("🩹 Atención por lesión: "+p.name+" ("+teamName(p.team)+")");vibrate([70,40,70]);renderStats();save()};
@@ -777,64 +773,26 @@ updateHeadings();renderCardOptions();updateCardRegister();updateDisplay();
 
 
 <script>
-/* ===== MODOS DE PARTIDO Y GESTOR DE SONIDOS ===== */
+/* ===== MODOS DE PARTIDO Y CONTROL DE SONIDO ===== */
 (()=>{
  const byId=id=>document.getElementById(id);
- const DB="ArbitroProAudioDB",STORE="sounds";
- let database=null,sounds=[];
- function openAudioDB(){
-  return new Promise((resolve,reject)=>{
-   const req=indexedDB.open(DB,1);
-   req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains(STORE))req.result.createObjectStore(STORE,{keyPath:"id",autoIncrement:true})};
-   req.onsuccess=()=>{database=req.result;resolve(database)};
-   req.onerror=()=>reject(req.error);
-  });
- }
- function store(mode="readonly"){return database.transaction(STORE,mode).objectStore(STORE)}
- async function loadSounds(){
-  try{
-   if(!database)await openAudioDB();
-   sounds=await new Promise((resolve,reject)=>{const q=store().getAll();q.onsuccess=()=>resolve(q.result||[]);q.onerror=()=>reject(q.error)});
-   renderSoundList();
-  }catch(e){byId("soundLibrary").textContent="No se pudo abrir el almacenamiento de sonidos en este navegador."}
- }
- function renderSoundList(){
-  const box=byId("soundLibrary");box.replaceChildren();
-  if(!sounds.length){const p=document.createElement("div");p.className="small";p.textContent="Todavía no hay sonidos personalizados.";box.append(p);return}
-  sounds.forEach(s=>{
-   const row=document.createElement("div");row.className="sound-row";
-   const name=document.createElement("span");name.textContent=s.name+" · "+({whistle:"Silbato",goal:"Gol",card:"Tarjetas",startend:"Inicio/final",substitution:"Sustituciones"}[s.category]||s.category);
-   const play=document.createElement("button");play.className="secondary";play.textContent="▶ PROBAR";play.onclick=()=>playBlob(s.blob);
-   const remove=document.createElement("button");remove.className="danger";remove.textContent="🗑 ELIMINAR";remove.onclick=()=>deleteSound(s.id);
-   row.append(name,play,remove);box.append(row);
-  });
- }
- function playBlob(blob){
-  const url=URL.createObjectURL(blob),audio=new Audio(url);
-  audio.onended=()=>URL.revokeObjectURL(url);audio.onerror=()=>URL.revokeObjectURL(url);
-  audio.play().catch(()=>URL.revokeObjectURL(url));
- }
- window.addCustomSound=async function(){
-  const file=byId("soundFile").files[0];
-  if(!file){alert("Selecciona primero un archivo de audio.");return}
-  if(!file.type.startsWith("audio/")){alert("Selecciona un archivo de audio válido.");return}
-  try{
-   if(!database)await openAudioDB();
-   const entry={name:file.name,category:byId("soundCategory").value,blob:file};
-   await new Promise((resolve,reject)=>{const q=store("readwrite").add(entry);q.onsuccess=resolve;q.onerror=()=>reject(q.error)});
-   byId("soundFile").value="";await loadSounds();
-  }catch(e){alert("No se pudo guardar el sonido. Prueba con un archivo de audio más pequeño.")}
+ window.soundsEnabled=(()=>{try{return localStorage.getItem("arbitroProSounds")!=="off"}catch(e){return true}})();
+ window.toggleSounds=function(){
+  window.soundsEnabled=!window.soundsEnabled;
+  try{localStorage.setItem("arbitroProSounds",window.soundsEnabled?"on":"off")}catch(e){}
+  updateSoundButton();
+  if(!window.soundsEnabled){
+   const audio=byId("whistleAudio");
+   if(audio){audio.pause();audio.currentTime=0}
+  }
  };
- async function deleteSound(id){
-  if(!confirm("¿Eliminar este sonido?"))return;
-  try{await new Promise((resolve,reject)=>{const q=store("readwrite").delete(id);q.onsuccess=resolve;q.onerror=()=>reject(q.error)});await loadSounds()}
-  catch(e){alert("No se pudo eliminar el sonido.")}
+ function updateSoundButton(){
+  const b=byId("soundToggle");if(!b)return;
+  b.textContent=window.soundsEnabled?"🔊 SONIDO ACTIVADO":"🔇 SONIDO SILENCIADO";
+  b.classList.toggle("secondary",!window.soundsEnabled);
  }
- window.playCustomSound=function(category){
-  const sound=[...sounds].reverse().find(s=>s.category===category);
-  if(!sound)return false;
-  playBlob(sound.blob);return true;
- };
+ const originalWhistle=window.whistle;
+ window.whistle=function(){if(window.soundsEnabled)originalWhistle()};
  window.setMatchMode=function(mode){
   const fast=mode==="fast";
   document.body.classList.toggle("fast-mode",fast);
@@ -865,24 +823,9 @@ updateHeadings();renderCardOptions();updateCardRegister();updateDisplay();
   originalGoal();
   fillScorerSelectors();
  };
- const originalCard=window.giveCard;
- window.giveCard=function(type){originalCard(type);if(window.playCustomSound)window.playCustomSound("card")};
- const originalSub=window.makeSubstitution;
- window.makeSubstitution=function(){originalSub();if(window.playCustomSound)window.playCustomSound("substitution")};
- const originalAddEvent=window.addEvent;
- window.addEvent=function(message,time){
-  if(byId("matchMode")?.value==="fast"){
-   const essential=/inicio del|final del|gol|amarilla|roja|expulsado|cambio|var|penalti|prórroga|tanda/i.test(String(message));
-   if(!essential)return;
-  }
-  originalAddEvent(message,time);
-  if(/inicio del|final del/i.test(String(message))&&window.playCustomSound)window.playCustomSound("startend");
- };
- const originalWhistle=window.whistle;
- window.whistle=function(){if(window.playCustomSound&&window.playCustomSound("whistle"))return;originalWhistle()};
  const mode=(()=>{try{return localStorage.getItem("arbitroProMatchMode")||"normal"}catch(e){return "normal"}})();
  byId("matchMode").value=mode;window.setMatchMode(mode);
- fillScorerSelectors();loadSounds();
+ updateSoundButton();fillScorerSelectors();
 })();
 </script>
 </html>

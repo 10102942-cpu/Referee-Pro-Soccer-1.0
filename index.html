@@ -118,7 +118,7 @@ label{display:block;margin:8px}
 #individualStats{max-height:280px;overflow:auto;text-align:left;margin-top:12px}
 #reportOutput{white-space:pre-wrap;text-align:left;background:#07130f;padding:12px;border-radius:8px;margin-top:12px}
 .light-theme #reportOutput{background:#edf4ef;color:#17251c}
-@media print{header,.controls,button,#extraPanel,#playersStatsPanel,#quickPanel,#varPanel,#toolsPanel>div.controls{display:none!important}body{background:white!important;color:black!important}.panel{break-inside:avoid;border:1px solid #aaa!important;color:black!important}}
+@media print{body{background:white!important;color:black!important}header{display:none!important}main>section{display:none!important}#toolsPanel{display:block!important;background:white!important;border:0!important;color:black!important}#toolsPanel>*{display:none!important}#toolsPanel h2,#reportOutput{display:block!important}#reportOutput{white-space:pre-wrap;background:white!important;color:black!important;border:0!important}.panel{break-inside:avoid;border:0!important;color:black!important}}
 
 </style>
 </head>
@@ -714,7 +714,7 @@ updateHeadings();renderCardOptions();updateCardRegister();updateDisplay();
   beforeAction();const team=p.team;homeOrAwayScore(team,1);stats[id]??={goals:0,assists:0,injuries:0};stats[id].goals++;
   const aid=$x("goalAssist").value,a=allPlayers().find(x=>x.id===aid);
   if(a&&a.id!==id){stats[aid]??={goals:0,assists:0,injuries:0};stats[aid].assists++}
-  addEvent("⚽ GOL de "+p.name+" ("+teamName(team)+")"+(a&&a.id!==id+" — asistencia: "+a.name:""));
+  addEvent("⚽ GOL de "+p.name+" ("+teamName(team)+")"+(a&&a.id!==id?" — asistencia: "+a.name:""));
   whistle();updateDisplay();renderStats();vibrate(120);save();
  };
  function homeOrAwayScore(team,n){if(team==="home")homeScore=Math.max(0,homeScore+n);else awayScore=Math.max(0,awayScore+n)}
@@ -742,7 +742,7 @@ updateHeadings();renderCardOptions();updateCardRegister();updateDisplay();
   return lines.join("\n");
  }
  window.showMatchReport=function(){const box=$x("reportOutput");box.hidden=false;box.textContent=reportText()};
- window.exportMatchReport=function(){const text=reportText();const blob=new Blob([text],{type:"text/plain;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="informe-arbitral.txt";a.click();URL.revokeObjectURL(a.href);};
+ window.exportMatchReport=function(){window.showMatchReport();window.print();};
  // Dorsales editables en la lista de cada equipo.
  const oldRenderRoster=window.renderRoster;
  window.renderRoster=function(team){oldRenderRoster(team);const rows=$x(team+"Roster").querySelectorAll(".player-row");rosters[team].forEach((p,i)=>{const row=rows[i];if(!row)return;const num=document.createElement("input");num.type="number";num.min="1";num.max="99";num.value=p.number;num.title="Dorsal";num.style.width="58px";num.addEventListener("change",()=>{p.number=Math.max(1,Math.min(99,parseInt(num.value,10)||1));num.value=p.number;renderPitch();refreshStatPlayers();save()});row.insertBefore(num,row.children[1])})};
